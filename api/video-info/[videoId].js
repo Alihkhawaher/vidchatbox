@@ -16,9 +16,17 @@ module.exports = async (req, res) => {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { videoId } = req.query;
-    
     try {
+        // Get videoId from the URL path parameter
+        const videoId = req.url.split('/').pop().split('?')[0];
+        
+        if (!videoId) {
+            return res.status(400).json({
+                error: 'Missing video ID',
+                timestamp: new Date().toISOString()
+            });
+        }
+
         console.log(`Fetching video info for video ID: ${videoId}`);
         const videoInfo = await getVideoInfo(videoId);
         
@@ -30,9 +38,13 @@ module.exports = async (req, res) => {
     } catch (error) {
         console.error('Error fetching video info:', error);
         
-        return res.status(404).json({
+        // Determine appropriate status code based on error
+        const statusCode = error.message.includes('API key') ? 500 : 
+                         error.message.includes('not found') ? 404 : 
+                         error.response?.status || 500;
+        
+        return res.status(statusCode).json({
             error: 'Video info not found',
-            videoId,
             details: error.message,
             timestamp: new Date().toISOString()
         });

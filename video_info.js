@@ -1,9 +1,13 @@
 const axios = require('axios');
 
-const API_KEY = 'AIzaSyB5KOBmVMoUcQCwnXkIq5c57pUAn1gPLNc';
+const API_KEY = process.env.YOUTUBE_API_KEY;
 const BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
 async function getVideoInfo(videoId) {
+    if (!API_KEY) {
+        throw new Error('YouTube API key is not configured');
+    }
+
     try {
         const response = await axios.get(`${BASE_URL}/videos`, {
             params: {

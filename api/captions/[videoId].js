@@ -16,11 +16,19 @@ module.exports = async (req, res) => {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { videoId } = req.query;
+    // Get videoId from the URL path parameter
+    const videoId = req.url.split('/').pop().split('?')[0];
     const lang = req.query.lang || 'en';
     const allowAuto = req.query.auto === 'true';
     const includeTimestamps = req.query.timestamps === 'true';
     
+    if (!videoId) {
+        return res.status(400).json({
+            error: 'Missing video ID',
+            timestamp: new Date().toISOString()
+        });
+    }
+
     console.log(`Fetching captions for video ID: ${videoId}`);
     console.log(`Language: ${lang}, Allow Auto-generated: ${allowAuto}`);
 
