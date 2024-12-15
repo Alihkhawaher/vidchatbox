@@ -1,14 +1,18 @@
 const axios = require('axios');
+const config = require('./config');
 
-const API_KEY = process.env.YOUTUBE_API_KEY;
-const BASE_URL = 'https://www.googleapis.com/youtube/v3';
+const BASE_URL = config.youtube.baseUrl;
+const API_KEY = config.youtube.apiKey;
 
 async function getVideoInfo(videoId) {
     if (!API_KEY) {
+        console.error('YouTube API key not found in configuration');
         throw new Error('YouTube API key is not configured');
     }
 
     try {
+        console.log('Making request with API key:', API_KEY.substring(0, 8) + '...');
+        
         const response = await axios.get(`${BASE_URL}/videos`, {
             params: {
                 part: 'snippet,statistics,contentDetails',
@@ -71,6 +75,9 @@ ${metadata.description}
         };
     } catch (error) {
         console.error('Error fetching video info:', error.message);
+        if (error.response?.data?.error?.message) {
+            throw new Error(`YouTube API error: ${error.response.data.error.message}`);
+        }
         throw error;
     }
 }
