@@ -7,7 +7,22 @@
     { "src": "api/**/*.js", "use": "@vercel/node" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { 
+      "src": "/api/captions/(.*)", 
+      "dest": "/api/captions/[videoId].js"
+    },
+    { 
+      "src": "/api/video-info/(.*)", 
+      "dest": "/api/video-info/[videoId].js"
+    },
+    { 
+      "src": "/api/chat/clear", 
+      "dest": "/api/chat/clear.js"
+    },
+    { 
+      "src": "/api/chat", 
+      "dest": "/api/chat/index.js"
+    },
     { "src": "/(.*)", "dest": "/$1" }
   ]
 }
