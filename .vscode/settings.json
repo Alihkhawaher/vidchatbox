@@ -1,0 +1,9 @@
+{
+    "spellright.language": [
+        "ar"
+    ],
+    "spellright.documentTypes": [
+        "latex",
+        "plaintext"
+    ]
+}
