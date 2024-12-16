@@ -1,5 +1,4 @@
 const { getVideoInfo } = require('../../video_info.js');
-const config = require('../../config');
 
 module.exports = async (req, res) => {
     // Enable CORS
@@ -18,14 +17,6 @@ module.exports = async (req, res) => {
     }
 
     try {
-        // Log configuration state
-        console.log('Configuration check:', {
-            hasConfig: !!config,
-            hasYoutubeConfig: !!config.youtube,
-            hasApiKey: !!config.youtube.apiKey,
-            apiKeyPrefix: config.youtube.apiKey ? config.youtube.apiKey.substring(0, 8) + '...' : 'not set'
-        });
-
         // Log environment variables
         console.log('Environment variables check:', {
             hasYoutubeKey: !!process.env.YOUTUBE_API_KEY,

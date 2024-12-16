@@ -1,12 +1,11 @@
 const axios = require('axios');
-const config = require('./config');
 
-const BASE_URL = config.youtube.baseUrl;
-const API_KEY = config.youtube.apiKey;
+const BASE_URL = 'https://www.googleapis.com/youtube/v3';
+const API_KEY = process.env.YOUTUBE_API_KEY;
 
 async function getVideoInfo(videoId) {
     if (!API_KEY) {
-        console.error('YouTube API key not found in configuration');
+        console.error('YouTube API key not found in environment variables');
         throw new Error('YouTube API key is not configured');
     }
 
