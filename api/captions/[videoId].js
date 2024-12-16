@@ -1,4 +1,4 @@
-const { getSubtitles } = require('youtube-captions-scraper');
+const axios = require('axios');
 
 function formatCaptions(captions, includeTimestamps) {
     return captions
@@ -15,6 +15,23 @@ function formatCaptions(captions, includeTimestamps) {
         })
         .join('\n')
         .trim();
+}
+
+async function fetchCaptions(videoId, lang, auto = false) {
+    const endpoint = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}${auto ? '&kind=asr' : ''}&fmt=json3`;
+    const response = await axios.get(endpoint);
+    
+    if (!response.data?.events) {
+        throw new Error(`No ${auto ? 'auto-generated' : 'manual'} captions found for language: ${lang}`);
+    }
+
+    return response.data.events
+        .map(event => ({
+            start: event.tStartMs / 1000,
+            dur: (event.dDurationMs || 0) / 1000,
+            text: event.segs ? event.segs.map(seg => seg.utf8).join(' ') : ''
+        }))
+        .filter(caption => caption.text.trim());
 }
 
 module.exports = async (req, res) => {
@@ -45,16 +62,10 @@ module.exports = async (req, res) => {
     try {
         // Try manual captions first
         try {
-            const captions = await getSubtitles({
-                videoID: videoId,
-                lang: lang
-            });
-
-            if (captions?.length > 0) {
-                const fullText = formatCaptions(captions, includeTimestamps);
-                console.log(`Successfully fetched manual captions. Length: ${fullText.length} characters`);
-                return res.status(200).send(fullText);
-            }
+            const captions = await fetchCaptions(videoId, lang, false);
+            const fullText = formatCaptions(captions, includeTimestamps);
+            console.log(`Successfully fetched manual captions. Length: ${fullText.length} characters`);
+            return res.status(200).send(fullText);
         } catch (error) {
             console.log('Manual captions not available:', error.message);
         }
@@ -62,23 +73,15 @@ module.exports = async (req, res) => {
         // Try auto-generated captions if allowed
         if (allowAuto) {
             try {
-                const captions = await getSubtitles({
-                    videoID: videoId,
-                    lang: lang,
-                    auto: true
-                });
-
-                if (captions?.length > 0) {
-                    const fullText = formatCaptions(captions, includeTimestamps);
-                    console.log(`Successfully fetched auto-generated captions. Length: ${fullText.length} characters`);
-                    return res.status(200).send(fullText);
-                }
+                const captions = await fetchCaptions(videoId, lang, true);
+                const fullText = formatCaptions(captions, includeTimestamps);
+                console.log(`Successfully fetched auto-generated captions. Length: ${fullText.length} characters`);
+                return res.status(200).send(fullText);
             } catch (error) {
                 console.log('Auto-generated captions not available:', error.message);
             }
         }
 
-        // No captions found
         throw new Error(`No ${allowAuto ? 'manual or auto-generated' : 'manual'} captions found for language: ${lang}`);
 
     } catch (error) {
