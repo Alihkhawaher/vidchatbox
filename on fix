@@ -1,0 +1,84 @@
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mindex c2658d7..9f7622b 100644[m
+[1m--- a/.gitignore[m
+[1m+++ b/.gitignore[m
+[36m@@ -1 +1,2 @@[m
+ node_modules/[m
+[32m+[m[32m.vercel[m
+[1mdiff --git a/api/captions/[videoId].js b/api/captions/[videoId].js[m
+[1mindex 87f11fa..73a708b 100644[m
+[1m--- a/api/captions/[videoId].js[m
+[1m+++ b/api/captions/[videoId].js[m
+[36m@@ -5,6 +5,7 @@[m [mmodule.exports = async (req, res) => {[m
+     res.setHeader('Access-Control-Allow-Origin', '*');[m
+     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');[m
+     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');[m
+[32m+[m[32m    res.setHeader('Content-Type', 'text/plain; charset=utf-8');[m
+ [m
+     // Handle preflight request[m
+     if (req.method === 'OPTIONS') {[m
+[1mdiff --git a/api/video-info/[videoId].js b/api/video-info/[videoId].js[m
+[1mindex cfc5f05..4d28e13 100644[m
+[1m--- a/api/video-info/[videoId].js[m
+[1m+++ b/api/video-info/[videoId].js[m
+[36m@@ -1,5 +1,4 @@[m
+ const { getVideoInfo } = require('../../video_info.js');[m
+[31m-const config = require('../../config');[m
+ [m
+ module.exports = async (req, res) => {[m
+     // Enable CORS[m
+[36m@@ -18,14 +17,6 @@[m [mmodule.exports = async (req, res) => {[m
+     }[m
+ [m
+     try {[m
+[31m-        // Log configuration state[m
+[31m-        console.log('Configuration check:', {[m
+[31m-            hasConfig: !!config,[m
+[31m-            hasYoutubeConfig: !!config.youtube,[m
+[31m-            hasApiKey: !!config.youtube.apiKey,[m
+[31m-            apiKeyPrefix: config.youtube.apiKey ? config.youtube.apiKey.substring(0, 8) + '...' : 'not set'[m
+[31m-        });[m
+[31m-[m
+         // Log environment variables[m
+         console.log('Environment variables check:', {[m
+             hasYoutubeKey: !!process.env.YOUTUBE_API_KEY,[m
+[1mdiff --git a/index.html b/index.html[m
+[1mindex dbcd816..96227fb 100644[m
+[1m--- a/index.html[m
+[1m+++ b/index.html[m
+[36m@@ -4,7 +4,7 @@[m
+     <meta charset="UTF-8">[m
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">[m
+     <title>YouTube Video Summarizer</title>[m
+[31m-    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8AAAAAEQAAADkAAAA5AAAAOQAAADkAAAA5AAAAOQAAADkAAAA5AAAAOQAAADkAAAA5AAAAEQAAAAD///8A////AAAAAEgAAADHAAAAxwAAAMcAAADHAAAAxwAAAMcAAADHAAAAxwAAAMcAAADHAAAAxwAAAEj///8A////AP///wAAAABIAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAABI////AP///wD///8AAAAASAAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAASP///wD///8A////AAAAAEgAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAEj///8A////AP///wAAAABIAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAABI////AP///wD///8AAAAASAAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAASP///wD///8A////AAAAAEgAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAEj///8A////AP///wAAAABIAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAADkAAAA5AAAAOQAAADkAAAAR////AP///wD///8AAAAASAAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADHAAAAxwAAAMcAAADHAAAASP///wD///8A////AAAAAEgAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAEj///8A////AP///wAAAAARAAAAOQAAADkAAAA5AAAAOQAAADkAAAA5AAAAOQAAADkAAAA5AAAAOQAAADkAAAAR////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wA=">[m
+[32m+[m[32m    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8AAAAAEQAAADkAAAA5AAAAOQAAADkAAAA5AAAAOQAAADkAAAA5AAAAOQAAADkAAAA5AAAAEQAAAAD///8A////AAAAAEgAAADHAAAAxwAAAMcAAADHAAAAxwAAAMcAAADHAAAAxwAAAMcAAADHAAAAxwAAAEj///8A////AP///wAAAABIAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAABI////AP///wD///8AAAAASAAAAOkAAADpAAAA6QAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAEj///8A////AP///wAAAABIAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAABI////AP///wD///8AAAAASAAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAASP///wD///8A////AAAAAEgAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAEj///8A////AP///wAAAABIAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAABI////AP///wD///8AAAAASAAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAAA5AAAAOQAAADkAAAA5AAAAEQAAAAD///8A////AAAAAEgAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAAxwAAAMcAAADHAAAAxwAAAEj///8A////AP///wAAAABIAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAADpAAAA6QAAAOkAAABI////AP///wD///8AAAAAEQAAADEAAAA5AAAAOQAAADkAAAA5AAAAOQAAADkAAAA5AAAAOQAAADkAAAA5AAAAEQAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A=">[m
+     <link rel="stylesheet" href="styles.css">[m
+     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>[m
+ </head>[m
+[36m@@ -54,6 +54,5 @@[m
+     <script src="translations.js"></script>[m
+     <script src="utils.js"></script>[m
+     <script src="main.js"></script>[m
+[31m-    <script src="events.js"></script>[m
+ </body>[m
+ </html>[m
+[1mdiff --git a/video_info.js b/video_info.js[m
+[1mindex 488cc3a..63bd6ec 100644[m
+[1m--- a/video_info.js[m
+[1m+++ b/video_info.js[m
+[36m@@ -1,12 +1,11 @@[m
+ const axios = require('axios');[m
+[31m-const config = require('./config');[m
+ [m
+[31m-const BASE_URL = config.youtube.baseUrl;[m
+[31m-const API_KEY = config.youtube.apiKey;[m
+[32m+[m[32mconst BASE_URL = 'https://www.googleapis.com/youtube/v3';[m
+[32m+[m[32mconst API_KEY = process.env.YOUTUBE_API_KEY;[m
+ [m
+ async function getVideoInfo(videoId) {[m
+     if (!API_KEY) {[m
+[31m-        console.error('YouTube API key not found in configuration');[m
+[32m+[m[32m        console.error('YouTube API key not found in environment variables');[m
+         throw new Error('YouTube API key is not configured');[m
+     }[m
+ [m

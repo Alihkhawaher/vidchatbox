@@ -1,4 +1,21 @@
-const { fetchCaptionsWithFallback } = require('../../utils/captions');
+const { getSubtitles } = require('youtube-captions-scraper');
+
+function formatCaptions(captions, includeTimestamps) {
+    return captions
+        .map(caption => {
+            if (includeTimestamps) {
+                const startTime = Math.floor(caption.start);
+                const hours = Math.floor(startTime / 3600);
+                const minutes = Math.floor((startTime % 3600) / 60);
+                const seconds = startTime % 60;
+                const timestamp = `[${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
+                return `${timestamp} ${caption.text}`;
+            }
+            return caption.text;
+        })
+        .join('\n')
+        .trim();
+}
 
 module.exports = async (req, res) => {
     // Enable CORS
@@ -7,17 +24,9 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
 
-    // Handle preflight request
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-    // Only allow GET requests
-    if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-
-    // Get videoId from the URL path parameter
     const videoId = req.url.split('/').pop().split('?')[0];
     const lang = req.query.lang || 'en';
     const allowAuto = req.query.auto === 'true';
@@ -34,76 +43,46 @@ module.exports = async (req, res) => {
     console.log(`Language: ${lang}, Allow Auto-generated: ${allowAuto}, Include Timestamps: ${includeTimestamps}`);
 
     try {
-        // Try to get manual captions first
+        // Try manual captions first
         try {
-            console.log('Attempting to fetch manual captions...');
-            const captions = await fetchCaptionsWithFallback(videoId, lang, false);
+            const captions = await getSubtitles({
+                videoID: videoId,
+                lang: lang
+            });
 
-            if (captions && captions.length > 0) {
-                const fullText = captions
-                    .map(caption => {
-                        if (includeTimestamps) {
-                            const startTime = Math.floor(caption.start);
-                            const hours = Math.floor(startTime / 3600);
-                            const minutes = Math.floor((startTime % 3600) / 60);
-                            const seconds = startTime % 60;
-                            const timestamp = `[${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
-                            return `${timestamp} ${caption.text}`;
-                        }
-                        return caption.text;
-                    })
-                    .join('\n')
-                    .trim();
-
+            if (captions?.length > 0) {
+                const fullText = formatCaptions(captions, includeTimestamps);
                 console.log(`Successfully fetched manual captions. Length: ${fullText.length} characters`);
                 return res.status(200).send(fullText);
-            } else {
-                console.log('No manual captions found in response');
             }
         } catch (error) {
-            console.log('Error fetching manual captions:', error.message);
+            console.log('Manual captions not available:', error.message);
         }
 
-        // If manual captions aren't available and auto-generated are allowed, try those
+        // Try auto-generated captions if allowed
         if (allowAuto) {
             try {
-                console.log(`Attempting to fetch auto-generated captions for language: ${lang}`);
-                const autoCaptions = await fetchCaptionsWithFallback(videoId, lang, true);
+                const captions = await getSubtitles({
+                    videoID: videoId,
+                    lang: lang,
+                    auto: true
+                });
 
-                if (autoCaptions && autoCaptions.length > 0) {
-                    const fullText = autoCaptions
-                        .map(caption => {
-                            if (includeTimestamps) {
-                                const startTime = Math.floor(caption.start);
-                                const hours = Math.floor(startTime / 3600);
-                                const minutes = Math.floor((startTime % 3600) / 60);
-                                const seconds = startTime % 60;
-                                const timestamp = `[${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
-                                return `${timestamp} ${caption.text}`;
-                            }
-                            return caption.text;
-                        })
-                        .join('\n')
-                        .trim();
-
+                if (captions?.length > 0) {
+                    const fullText = formatCaptions(captions, includeTimestamps);
                     console.log(`Successfully fetched auto-generated captions. Length: ${fullText.length} characters`);
                     return res.status(200).send(fullText);
-                } else {
-                    console.log('No auto-generated captions found in response');
                 }
             } catch (error) {
-                console.log('Error fetching auto-generated captions:', error.message);
+                console.log('Auto-generated captions not available:', error.message);
             }
         }
 
-        // If we get here, no captions were found
-        const errorMessage = `No ${allowAuto ? 'manual or auto-generated' : 'manual'} captions found for language: ${lang}`;
-        console.log(errorMessage);
-        throw new Error(errorMessage);
+        // No captions found
+        throw new Error(`No ${allowAuto ? 'manual or auto-generated' : 'manual'} captions found for language: ${lang}`);
 
     } catch (error) {
         console.error('Error processing request:', error);
-        
         return res.status(404).json({
             error: 'Captions not found',
             videoId,
