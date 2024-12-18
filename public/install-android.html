@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Install VidChatBox on Android</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .button {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .note {
+            background: #e7f3fe;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .code-block {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: monospace;
+        }
+        .copy-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .copy-button:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <h1>Install VidChatBox on Android</h1>
+    
+    <div class="warning">
+        ⚠️ Make sure you have installed Termux from F-Droid (not Play Store) before proceeding.
+    </div>
+
+    <div class="step">
+        <h2>Step 1: Install Required Apps</h2>
+        <p>Install these apps from F-Droid:</p>
+        <a href="https://f-droid.org/en/packages/com.termux/" class="button" target="_blank">1. Download Termux</a>
+        <a href="https://f-droid.org/packages/com.termux.widget/" class="button" target="_blank">2. Download Termux:Widget</a>
+        <div class="note">
+            💡 Termux:Widget allows you to create a launcher icon on your home screen.
+        </div>
+    </div>
+
+    <div class="step">
+        <h2>Step 2: Install VidChatBox</h2>
+        <p>Open Termux and paste this command:</p>
+        <div class="code-block">
+            <code id="installCommand">curl -L "https://raw.githubusercontent.com/Alihkhawaher/vidchatbox/vercel/public/install-android.sh" | bash</code>
+            <button class="copy-button" onclick="copyCommand('installCommand')">Copy</button>
+        </div>
+        
+        <div class="note">
+            💡 If the above command doesn't work, try this alternative:
+            <div class="code-block">
+                <code id="altCommand">pkg install git -y && git clone -b vercel https://github.com/Alihkhawaher/vidchatbox.git && cd vidchatbox && bash public/install-android.sh</code>
+                <button class="copy-button" onclick="copyCommand('altCommand')">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="step">
+        <h2>Step 3: Create Home Screen Icon</h2>
+        <ol>
+            <li>Long press on your home screen</li>
+            <li>Select "Widgets"</li>
+            <li>Find and add "Termux Widget"</li>
+            <li>Tap the widget and select "VidChatBox"</li>
+        </ol>
+        <div class="note">
+            💡 The icon will automatically start the server and open the app in your browser.
+        </div>
+    </div>
+
+    <div class="step">
+        <h2>Step 4: Access the App</h2>
+        <p>You can access VidChatBox in three ways:</p>
+        <ol>
+            <li>Tap the home screen icon (recommended)</li>
+            <li>Open in browser: <code>http://localhost:3005</code></li>
+            <li>Use command line in Termux:</li>
+        </ol>
+        <div class="code-block">
+# Start the server
+vidchatbox start
+
+# Check server status
+vidchatbox status
+
+# Stop the server
+vidchatbox stop
+
+# Restart the server
+vidchatbox restart</div>
+    </div>
+
+    <script>
+        // Check if running on Android
+        if (!/Android/i.test(navigator.userAgent)) {
+            document.body.innerHTML = '<div class="warning" style="text-align: center;"><h2>⚠️ This installation page is only for Android devices</h2><p>Please visit this page on your Android device to install VidChatBox.</p></div>';
+        }
+        
+        // Copy command function
+        function copyCommand(elementId) {
+            const commandText = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(commandText).then(function() {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            }).catch(function(err) {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy command. Please try selecting and copying manually.');
+            });
+        }
+    </script>
+</body>
+</html>
