@@ -25,7 +25,7 @@ pkg update -y
 
 # Install required packages
 print_step "Installing required packages..."
-pkg install -y nodejs git termux-api termux-services
+pkg install -y nodejs git termux-api termux-services cronie
 
 # Create app directory
 print_step "Creating app directory..."
@@ -46,13 +46,33 @@ fi
 print_step "Installing Node.js dependencies..."
 npm install
 
+# Create monitor script
+print_step "Setting up service monitor..."
+cat > ~/bin/vidchatbox-monitor << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+
+# Check if server is running
+if ! pgrep -f "node server.js" > /dev/null; then
+    cd ~/vidchatbox
+    node server.js &
+    echo "[$(date)] Server restarted" >> ~/vidchatbox/monitor.log
+fi
+EOF
+chmod +x ~/bin/vidchatbox-monitor
+
+# Setup cron job for monitoring
+print_step "Setting up automatic monitoring..."
+mkdir -p ~/.termux/tasker
+(crontab -l 2>/dev/null || echo "") | { cat; echo "*/5 * * * * ~/bin/vidchatbox-monitor"; } | crontab -
+sv-enable crond
+
 # Create autostart script
 print_step "Setting up autostart..."
 mkdir -p ~/.termux/boot
 cat > ~/.termux/boot/start-vidchatbox.sh << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 cd ~/vidchatbox
-node server.js
+node server.js &
 EOF
 chmod +x ~/.termux/boot/start-vidchatbox.sh
 
@@ -66,7 +86,8 @@ start_server() {
     if pgrep -f "node server.js" > /dev/null; then
         echo "Server is already running"
     else
-        node server.js
+        node server.js &
+        echo "Server started"
     fi
 }
 
@@ -94,6 +115,8 @@ case "$1" in
     "status")
         if pgrep -f "node server.js" > /dev/null; then
             echo "Server is running"
+            echo "Monitor log:"
+            tail -n 5 ~/vidchatbox/monitor.log
         else
             echo "Server is not running"
         fi
@@ -116,6 +139,7 @@ ensure_server_running() {
     if ! pgrep -f "node server.js" > /dev/null; then
         cd ~/vidchatbox
         node server.js &
+        sleep 2  # Wait for server to start
     fi
 }
 
@@ -133,19 +157,21 @@ echo "To manage the server:"
 echo "  vidchatbox start   - Start the server"
 echo "  vidchatbox stop    - Stop the server"
 echo "  vidchatbox restart - Restart the server"
-echo "  vidchatbox status  - Check server status"
+echo "  vidchatbox status  - Check server status and view monitor log"
 echo ""
 echo "To create a home screen icon:"
 echo "1. Install Termux:Widget from F-Droid"
 echo "2. Add the Termux:Widget to your home screen"
 echo "3. Select 'VidChatBox' from the widget list"
 echo ""
-echo "The server will automatically start when you:"
-echo "- Open Termux"
-echo "- Tap the home screen icon"
+echo "The server will:"
+echo "- Start automatically when you open Termux"
+echo "- Restart automatically if it stops (checked every 5 minutes)"
+echo "- Start when you tap the home screen icon"
 echo ""
 echo "Access the app at: http://localhost:3005"
 
-# Start the server
-print_step "Starting the server..."
+# Start the server and monitoring
+print_step "Starting services..."
+sv-enable crond
 vidchatbox start

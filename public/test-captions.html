@@ -130,8 +130,6 @@
         <pre id="output"></pre>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/he/1.2.0/he.min.js"></script>
-    <script src="/js/youtube-captions.js"></script>
     <script>
         function log(message, type = 'info') {
             const logDiv = document.getElementById('log');
@@ -172,22 +170,15 @@
                 }
 
                 log(`Testing video ID: ${videoId}, Language: ${language}`, 'api');
-                const client = new YouTubeCaptions();
-
-                // Override fetchData to log network requests and capture server response
-                const originalFetch = client.fetchData;
-                client.fetchData = async (url) => {
-                    log(`Fetching: ${url}`, 'network');
-                    const result = await originalFetch.call(client, url);
-                    log(`Received response`, 'network');
-                    
-                    // Display the raw server response
-                    serverResponse.textContent = JSON.stringify(result, null, 2);
-                    
-                    return result;
-                };
-
-                const captions = await client.getCaptions(videoId, language);
+                
+                // Fetch captions from server endpoint
+                const response = await fetch(`/api/captions/${videoId}?lang=${language}&auto=true&timestamps=true`);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.details || 'Failed to fetch captions');
+                }
+                
+                const captions = await response.text();
                 
                 // Show caption stats
                 const lineCount = captions.split('\n').length;
