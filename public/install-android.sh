@@ -154,10 +154,10 @@ chmod +x ~/.shortcuts/VidChatBox.sh
 print_success "Installation complete!"
 echo ""
 echo "To manage the server:"
-echo "  vidchatbox start   - Start the server"
-echo "  vidchatbox stop    - Stop the server"
-echo "  vidchatbox restart - Restart the server"
-echo "  vidchatbox status  - Check server status and view monitor log"
+echo "  ~/bin/vidchatbox start   - Start the server"
+echo "  ~/bin/vidchatbox stop    - Stop the server"
+echo "  ~/bin/vidchatbox restart - Restart the server"
+echo "  ~/bin/vidchatbox status  - Check server status and view monitor log"
 echo ""
 echo "To create a home screen icon:"
 echo "1. Install Termux:Widget from F-Droid"
@@ -174,4 +174,6 @@ echo "Access the app at: http://localhost:3005"
 # Start the server and monitoring
 print_step "Starting services..."
 sv-enable crond
-vidchatbox start
+cd ~/vidchatbox
+node server.js &
+echo "Server started"
