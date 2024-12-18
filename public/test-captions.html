@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouTube Caption Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        pre {
+            white-space: pre-wrap;
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-family: monospace;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+            padding: 10px;
+            background: #fff5f5;
+            border-left: 3px solid red;
+        }
+        .info {
+            color: #0066cc;
+            margin: 10px 0;
+            padding: 10px;
+            background: #f0f7ff;
+            border-left: 3px solid #0066cc;
+        }
+        input {
+            width: 300px;
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        select {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 15px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        #loading {
+            display: none;
+            color: #666;
+            margin: 10px 0;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #ccc;
+        }
+        .log-entry.network { border-left-color: #17a2b8; }
+        .log-entry.api { border-left-color: #28a745; }
+        .log-entry.error { border-left-color: #dc3545; }
+        .timestamp {
+            color: #666;
+            font-size: 0.85em;
+            margin-right: 10px;
+        }
+        .section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <h1>YouTube Caption Test</h1>
+    <div>
+        <input type="text" id="videoUrl" placeholder="Enter YouTube URL">
+        <select id="language">
+            <option value="en">English</option>
+            <option value="ar">Arabic</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="ja">Japanese</option>
+            <option value="ko">Korean</option>
+            <option value="ru">Russian</option>
+            <option value="zh">Chinese</option>
+        </select>
+        <button onclick="testCaptions()">Get Captions</button>
+    </div>
+    <div id="loading">Loading captions...</div>
+    <div id="info" class="info" style="display: none;"></div>
+    <div id="error" class="error" style="display: none;"></div>
+    
+    <div id="log"></div>
+    
+    <div class="section">
+        <h2>Server Response</h2>
+        <pre id="serverResponse"></pre>
+    </div>
+    
+    <div class="section">
+        <h2>Formatted Captions</h2>
+        <pre id="output"></pre>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/he/1.2.0/he.min.js"></script>
+    <script src="/js/youtube-captions.js"></script>
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toISOString();
+            entry.innerHTML = `<span class="timestamp">${timestamp}</span> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function extractVideoId(url) {
+            const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+            return match ? match[1] : null;
+        }
+
+        async function testCaptions() {
+            const url = document.getElementById('videoUrl').value;
+            const language = document.getElementById('language').value;
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const info = document.getElementById('info');
+            const output = document.getElementById('output');
+            const serverResponse = document.getElementById('serverResponse');
+            const logDiv = document.getElementById('log');
+
+            error.style.display = 'none';
+            info.style.display = 'none';
+            output.textContent = '';
+            serverResponse.textContent = '';
+            loading.style.display = 'block';
+            logDiv.innerHTML = '';
+
+            try {
+                const videoId = extractVideoId(url);
+                if (!videoId) {
+                    throw new Error('Invalid YouTube URL');
+                }
+
+                log(`Testing video ID: ${videoId}, Language: ${language}`, 'api');
+                const client = new YouTubeCaptions();
+
+                // Override fetchData to log network requests and capture server response
+                const originalFetch = client.fetchData;
+                client.fetchData = async (url) => {
+                    log(`Fetching: ${url}`, 'network');
+                    const result = await originalFetch.call(client, url);
+                    log(`Received response`, 'network');
+                    
+                    // Display the raw server response
+                    serverResponse.textContent = JSON.stringify(result, null, 2);
+                    
+                    return result;
+                };
+
+                const captions = await client.getCaptions(videoId, language);
+                
+                // Show caption stats
+                const lineCount = captions.split('\n').length;
+                const charCount = captions.length;
+                info.textContent = `Found ${lineCount} lines (${charCount} characters) of captions`;
+                info.style.display = 'block';
+                
+                output.textContent = captions;
+                log(`Successfully retrieved captions`, 'api');
+            } catch (err) {
+                error.textContent = `Error: ${err.message}`;
+                error.style.display = 'block';
+                log(`Error: ${err.message}`, 'error');
+                console.error('Error:', err);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Auto-fill with a test video
+        window.onload = () => {
+            document.getElementById('videoUrl').value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+            log('Page initialized', 'info');
+        };
+    </script>
+</body>
+</html>
