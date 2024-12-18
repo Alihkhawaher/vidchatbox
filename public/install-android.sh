@@ -48,6 +48,7 @@ npm install
 
 # Create monitor script
 print_step "Setting up service monitor..."
+mkdir -p ~/bin
 cat > ~/bin/vidchatbox-monitor << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 
@@ -62,7 +63,7 @@ chmod +x ~/bin/vidchatbox-monitor
 
 # Setup cron job for monitoring
 print_step "Setting up automatic monitoring..."
-mkdir -p ~/.termux/tasker
+mkdir -p ~/.cache
 (crontab -l 2>/dev/null || echo "") | { cat; echo "*/5 * * * * ~/bin/vidchatbox-monitor"; } | crontab -
 sv-enable crond
 
@@ -77,7 +78,6 @@ EOF
 chmod +x ~/.termux/boot/start-vidchatbox.sh
 
 # Create convenient shortcut
-mkdir -p ~/bin
 cat > ~/bin/vidchatbox << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 cd ~/vidchatbox
