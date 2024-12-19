@@ -13,12 +13,6 @@ print_success() {
     echo -e "\033[1;32m===> $1\033[0m"
 }
 
-# Check if running in Termux
-if [ ! -d "/data/data/com.termux" ]; then
-    echo "Error: This script must be run in Termux"
-    exit 1
-fi
-
 # Update package repositories
 print_step "Updating package repositories..."
 pkg update -y

@@ -1,0 +1,59 @@
+<nav class="navbar" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+        <a class="navbar-item" href="/">
+            <strong>YouTube Summarizer</strong>
+        </a>
+    </div>
+
+    <div class="navbar-menu">
+        <div class="navbar-start">
+            <a class="navbar-item" href="/">
+                <span class="icon">
+                    <i class="fas fa-home"></i>
+                </span>
+                <span data-translate="buttons.home">Home</span>
+            </a>
+            <a class="navbar-item" href="/install-android">
+                <span class="icon">
+                    <i class="fas fa-download"></i>
+                </span>
+                <span data-translate="buttons.install">Install App</span>
+            </a>
+            <a class="navbar-item" href="/diag">
+                <span class="icon">
+                    <i class="fas fa-stethoscope"></i>
+                </span>
+                <span data-translate="buttons.diagnostics">Diagnostics</span>
+            </a>
+            <a class="navbar-item" href="/api-instructions">
+                <span class="icon">
+                    <i class="fas fa-key"></i>
+                </span>
+                <span data-translate="buttons.apiInstructions">API Instructions</span>
+            </a>
+        </div>
+
+        <div class="navbar-end">
+            <div class="navbar-item">
+                <div class="field is-grouped">
+                    <div class="control">
+                        <div class="select">
+                            <select id="languageSelect">
+                                <option value="en">English</option>
+                                <option value="ar">العربية</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="control">
+                        <button id="settingsBtn" class="button">
+                            <span class="icon">
+                                <i class="fas fa-cog"></i>
+                            </span>
+                            <span>Settings</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

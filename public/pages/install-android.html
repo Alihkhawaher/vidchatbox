@@ -1,0 +1,130 @@
+    <div class="container is-max-desktop px-4 py-4">
+        <h1 class="title is-2 has-text-centered mb-6">Install VidChatBox on Android</h1>
+        
+        <div class="notification is-warning">
+            ⚠️ Make sure you have installed Termux from F-Droid (not Play Store) before proceeding.
+        </div>
+
+        <div class="box mb-5">
+            <h2 class="title is-4">Step 1: Install Required Apps</h2>
+            <p>Install these apps from F-Droid:</p>
+            <div class="buttons">
+                <a href="https://f-droid.org/en/packages/com.termux/" class="button is-primary" target="_blank">1. Download Termux</a>
+                <a href="https://f-droid.org/packages/com.termux.widget/" class="button is-primary" target="_blank">2. Download Termux:Widget</a>
+            </div>
+            <div class="notification is-info is-light">
+                💡 Termux:Widget allows you to create a launcher icon on your home screen.
+            </div>
+        </div>
+
+        <div class="box mb-5">
+            <h2 class="title is-4">Step 2: Install VidChatBox</h2>
+            <p>Click the button below to automatically start the installation in Termux:</p>
+            <a href="termux://x-url-handler?command=curl%20-L%20%22https%3A%2F%2Fraw.githubusercontent.com%2FAlihkhawaher%2Fvidchatbox%2Fvercel%2Fpublic%2Finstall-android.sh%22%20%7C%20bash" class="button is-link is-large install-button">
+                🚀 One-Click Install
+            </a>
+            
+            <p>Or manually copy and paste this command in Termux:</p>
+            <div class="code-block">
+                <code id="installCommand">curl -L "https://raw.githubusercontent.com/Alihkhawaher/vidchatbox/vercel/public/install-android.sh" | bash</code>
+                <button class="copy-button" onclick="copyCommand('installCommand')">Copy</button>
+            </div>
+            
+            <div class="notification is-info is-light mt-4">
+                💡 If the above methods don't work, try this alternative:
+                <div class="code-block mt-2">
+                    <code id="altCommand">pkg install git -y && git clone -b vercel https://github.com/Alihkhawaher/vidchatbox.git && cd vidchatbox && bash public/install-android.sh</code>
+                    <button class="copy-button" onclick="copyCommand('altCommand')">Copy</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="box mb-5">
+            <h2 class="title is-4">Step 3: Create Home Screen Icon</h2>
+            <div class="content">
+                <ol>
+                    <li>Long press on your home screen</li>
+                    <li>Select "Widgets"</li>
+                    <li>Find and add "Termux Widget"</li>
+                    <li>Tap the widget and select "VidChatBox"</li>
+                </ol>
+            </div>
+            <div class="notification is-info is-light">
+                💡 The icon will automatically start the server and open the app in your browser.
+            </div>
+        </div>
+
+        <div class="box">
+            <h2 class="title is-4">Step 4: Access the App</h2>
+            <p>You can access VidChatBox in three ways:</p>
+            <div class="content">
+                <ol>
+                    <li>Tap the home screen icon (recommended)</li>
+                    <li>Open in browser: <code>http://localhost:3005</code></li>
+                    <li>Use command line in Termux:</li>
+                </ol>
+            </div>
+            <div class="code-block">
+# Start the server
+vidchatbox start
+
+# Check server status
+vidchatbox status
+
+# Stop the server
+vidchatbox stop
+
+# Restart the server
+vidchatbox restart</div>
+        </div>
+    </div>
+
+<style>
+    .code-block {
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+        font-family: monospace;
+    }
+    .copy-button {
+        background: #6c757d;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-left: 10px;
+    }
+    .copy-button:hover {
+        background: #5a6268;
+    }
+    .install-button {
+        display: block;
+        padding: 15px 30px;
+        margin: 20px auto;
+        text-align: center;
+        font-size: 1.2em;
+        max-width: 300px;
+        cursor: pointer;
+    }
+</style>
+
+<script>
+    // Copy command function
+    function copyCommand(elementId) {
+        const commandText = document.getElementById(elementId).textContent;
+        navigator.clipboard.writeText(commandText).then(function() {
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = 'Copied!';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }).catch(function(err) {
+            console.error('Failed to copy:', err);
+            alert('Failed to copy command. Please try selecting and copying manually.');
+        });
+    }
+</script>
