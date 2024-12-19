@@ -30,7 +30,7 @@ git add .
 :: Commit with message
 echo.
 echo Committing changes...
-git commit -m "%message%"
+git commit -m "%*"
 
 :: Push to vercel branch
 echo.

@@ -88,7 +88,6 @@
     
     <!-- Load core functionality -->
     <script src="/js/router.js"></script>
-    <script src="/events.js"></script>
 
     <!-- Initialize translations -->
     <script>
@@ -142,13 +141,46 @@
             
             await loadMenu();
             
-            // Load main.js after menu is loaded
+            // Load events.js and main.js after menu is loaded
+            const eventsScript = document.createElement('script');
+            eventsScript.src = '/events.js';
+            document.body.appendChild(eventsScript);
+            
             const mainScript = document.createElement('script');
             mainScript.src = '/main.js';
             document.body.appendChild(mainScript);
         });
 
         function initializeMenu() {
+            // Initialize navbar burger menu
+            const burger = document.querySelector('.navbar-burger');
+            const menu = document.querySelector('.navbar-menu');
+            
+            if (burger && menu) {
+                burger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    burger.classList.toggle('is-active');
+                    menu.classList.toggle('is-active');
+                });
+
+                // Close menu when clicking outside
+                document.addEventListener('click', (e) => {
+                    const isClickInside = burger.contains(e.target) || menu.contains(e.target);
+                    if (!isClickInside && menu.classList.contains('is-active')) {
+                        burger.classList.remove('is-active');
+                        menu.classList.remove('is-active');
+                    }
+                });
+
+                // Close menu when clicking a menu item
+                menu.addEventListener('click', (e) => {
+                    if (e.target.closest('.navbar-item')) {
+                        burger.classList.remove('is-active');
+                        menu.classList.remove('is-active');
+                    }
+                });
+            }
+
             const languageSelect = document.getElementById('languageSelect');
             const settingsModal = document.getElementById('settingsModal');
             const settingsBtn = document.getElementById('settingsBtn');

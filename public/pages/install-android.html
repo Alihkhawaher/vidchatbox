@@ -1,4 +1,4 @@
-    <div class="container is-max-desktop px-4 py-4">
+<div class="container is-max-desktop px-4 py-4">
         <h1 class="title is-2 has-text-centered mb-6">Install VidChatBox on Android</h1>
         
         <div class="notification is-warning">
@@ -27,14 +27,14 @@
             <p>Or manually copy and paste this command in Termux:</p>
             <div class="code-block">
                 <code id="installCommand">curl -L "https://raw.githubusercontent.com/Alihkhawaher/vidchatbox/vercel/public/install-android.sh" | bash</code>
-                <button class="copy-button" onclick="copyCommand('installCommand')">Copy</button>
+                <button class="copy-button" onclick="copyCommand('installCommand', event)">Copy</button>
             </div>
             
             <div class="notification is-info is-light mt-4">
                 💡 If the above methods don't work, try this alternative:
                 <div class="code-block mt-2">
                     <code id="altCommand">pkg install git -y && git clone -b vercel https://github.com/Alihkhawaher/vidchatbox.git && cd vidchatbox && bash public/install-android.sh</code>
-                    <button class="copy-button" onclick="copyCommand('altCommand')">Copy</button>
+                    <button class="copy-button" onclick="copyCommand('altCommand', event)">Copy</button>
                 </div>
             </div>
         </div>
@@ -113,10 +113,10 @@ vidchatbox restart</div>
 
 <script>
     // Copy command function
-    function copyCommand(elementId) {
+    function copyCommand(elementId, event) {
         const commandText = document.getElementById(elementId).textContent;
         navigator.clipboard.writeText(commandText).then(function() {
-            const button = event.target;
+            const button = event ? event.target : document.querySelector(`button[onclick*="${elementId}"]`);
             const originalText = button.textContent;
             button.textContent = 'Copied!';
             setTimeout(() => {

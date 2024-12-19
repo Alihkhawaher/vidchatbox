@@ -19,7 +19,8 @@ pkg update -y
 
 # Install required packages
 print_step "Installing required packages..."
-pkg install -y nodejs git termux-api termux-services cronie
+pkg install -y libicu git termux-api termux-services cronie
+pkg install -y nodejs
 
 # Create app directory
 print_step "Creating app directory..."
