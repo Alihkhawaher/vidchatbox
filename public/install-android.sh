@@ -19,12 +19,11 @@ pkg update -y
 
 # Install required packages
 print_step "Installing required packages..."
-pkg install -y git termux-api termux-services cronie
+pkg install -y git termux-api termux-services cronie termux-wake-lock
 
 # Install Node.js LTS and npm
 print_step "Installing Node.js..."
-pkg uninstall -y nodejs nodejs-lts
-pkg install -y nodejs-lts npm
+pkg install -y nodejs-lts
 
 # Verify Node.js installation
 if ! command -v node &> /dev/null; then
@@ -84,6 +83,7 @@ print_step "Setting up autostart..."
 mkdir -p ~/.termux/boot
 cat > ~/.termux/boot/start-vidchatbox.sh << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
+termux-wake-lock
 cd ~/vidchatbox
 node server.js &
 EOF
@@ -149,6 +149,7 @@ cat > ~/.shortcuts/VidChatBox.sh << 'EOF'
 # Function to start server if not running
 ensure_server_running() {
     if ! pgrep -f "node server.js" > /dev/null; then
+        termux-wake-lock
         cd ~/vidchatbox
         node server.js &
         sleep 2  # Wait for server to start
@@ -163,6 +164,21 @@ termux-open-url "http://localhost:3005"
 EOF
 chmod +x ~/.shortcuts/VidChatBox.sh
 
+# Create widget shortcut for server control
+print_step "Creating server control widget..."
+cat > ~/.shortcuts/VidChatBox-Control.sh << 'EOF'
+#!/data/data/com.termux/files/usr/bin/bash
+
+if pgrep -f "node server.js" > /dev/null; then
+    ~/bin/vidchatbox stop
+    termux-toast "VidChatBox Server Stopped"
+else
+    ~/bin/vidchatbox start
+    termux-toast "VidChatBox Server Started"
+fi
+EOF
+chmod +x ~/.shortcuts/VidChatBox-Control.sh
+
 print_success "Installation complete!"
 echo ""
 echo "To manage the server:"
@@ -171,10 +187,11 @@ echo "  ~/bin/vidchatbox stop    - Stop the server"
 echo "  ~/bin/vidchatbox restart - Restart the server"
 echo "  ~/bin/vidchatbox status  - Check server status and view monitor log"
 echo ""
-echo "To create a home screen icon:"
+echo "To create home screen widgets:"
 echo "1. Install Termux:Widget from F-Droid"
-echo "2. Add the Termux:Widget to your home screen"
-echo "3. Select 'VidChatBox' from the widget list"
+echo "2. Add TWO Termux:Widgets to your home screen"
+echo "3. Select 'VidChatBox' for the first widget (launches app)"
+echo "4. Select 'VidChatBox-Control' for the second widget (start/stop server)"
 echo ""
 echo "The server will:"
 echo "- Start automatically when you open Termux"
