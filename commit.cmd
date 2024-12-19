@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 :: Get commit message from arguments
-set "message=%*"
+set "message=%1"
 if "!message!"=="" (
     echo Error: Please provide a commit message
     echo Usage: commit "Your commit message"
@@ -30,19 +30,12 @@ git add .
 :: Commit with message
 echo.
 echo Committing changes...
-git commit -m "%*"
+git commit -m "%1"
 
 :: Push to vercel branch
 echo.
 echo Pushing to vercel branch...
 git push origin vercel
-
-:: Deploy to Vercel if commit successful
-if !errorlevel! equ 0 (
-    echo.
-    echo Deploying to Vercel...
-    call deploy.cmd
-)
 
 echo.
 echo Operation completed successfully!

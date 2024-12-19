@@ -19,8 +19,25 @@ pkg update -y
 
 # Install required packages
 print_step "Installing required packages..."
-pkg install -y libicu git termux-api termux-services cronie
-pkg install -y nodejs
+pkg install -y git termux-api termux-services cronie
+
+# Install Node.js LTS and npm
+print_step "Installing Node.js..."
+pkg uninstall -y nodejs nodejs-lts
+pkg install -y nodejs-lts npm
+
+# Verify Node.js installation
+if ! command -v node &> /dev/null; then
+    echo "Error: Node.js installation failed"
+    exit 1
+fi
+
+if ! command -v npm &> /dev/null; then
+    echo "Error: npm installation failed"
+    exit 1
+fi
+
+print_step "Node.js $(node -v) and npm $(npm -v) installed successfully"
 
 # Create app directory
 print_step "Creating app directory..."
