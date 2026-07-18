@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Video Summarizer</title>
+    <title>VidChatBox</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📹</text></svg>">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma-rtl.min.css" disabled>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="/libs/css/bulma.min.css">
+    <link rel="stylesheet" href="/libs/css/bulma-rtl.min.css" disabled>
+    <link rel="stylesheet" href="/libs/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -18,7 +18,7 @@
 
     <footer class="footer">
         <div class="content has-text-centered">
-            <p>&copy; 2024 YouTube Video Summarizer. All rights reserved.</p>
+            <p>&copy; <span id="footerYear"></span> VidChatBox. All rights reserved.</p>
         </div>
     </footer>
 
@@ -27,52 +27,176 @@
         <div class="modal-background"></div>
         <div class="modal-card">
             <header class="modal-card-head">
-                <p class="modal-card-title" data-translate="settings.title">API Settings</p>
+                <p class="modal-card-title" data-translate="settings.title">Settings</p>
                 <button class="delete close" aria-label="close"></button>
             </header>
             <section class="modal-card-body">
                 <form id="settingsForm" class="settings-form">
+                    <!-- AI Mode selector -->
                     <div class="field">
-                        <h3 class="subtitle is-5" data-translate="settings.googleSection">Google Settings</h3>
-                        <div class="field">
-                            <label class="label" for="googleUsername">
-                                <span>Google Username</span>
-                            </label>
-                            <input type="text" id="googleUsername" name="googleUsername" class="input is-hidden" autocomplete="username">
+                        <label class="label is-small">AI Mode</label>
+                        <div class="select is-fullwidth">
+                            <select id="aiMode">
+                                <option value="local" selected>🌐 Local (Browser) — Free, private, works offline</option>
+                                <option value="cloud">☁️ Cloud (OpenRouter) — Higher quality, requires API key & internet</option>
+                                <option value="auto">🔄 Auto — Cloud when available, local fallback</option>
+                            </select>
                         </div>
-                        <div class="field">
-                            <label class="label" for="googleApiKey">
-                                <span data-translate="settings.googleApiKey">Google API Key</span>
-                            </label>
-                            <input type="password" id="googleApiKey" name="googleApiKey" class="input" autocomplete="new-password">
-                        </div>
+                        <p class="help">Controls both transcription and chat. Cloud mode uses your OpenRouter API key. Auto mode tries cloud first, falls back to local.</p>
                     </div>
-                    <div class="field">
-                        <h3 class="subtitle is-5" data-translate="settings.claudeSection">Claude Settings</h3>
+                    <hr>
+
+                    <!-- Browser AI (Local) section -->
+                    <div id="settings-local">
                         <div class="field">
-                            <label class="label" for="claudeUsername">
-                                <span>Claude Username</span>
-                            </label>
-                            <input type="text" id="claudeUsername" name="claudeUsername" class="input is-hidden" autocomplete="username">
+                            <h3 class="subtitle is-6">🎙️ Transcription Model</h3>
+                            <div class="select is-fullwidth">
+                                <select id="whisperModelSelect">
+                                    <option value="whisper-medium" selected>⭐ whisper-medium (~1.7GB) — Best Arabic quality (WebGPU)</option>
+                                    <option value="whisper-small">🎯 whisper-small (~510MB) — Fallback / no WebGPU</option>
+                                </select>
+                            </div>
+                            <div id="whisperModelInfo" class="notification is-success is-light model-info-box">
+                                <strong>⭐ whisper-medium (q4):</strong> 7/7 Arabic key words correct. ~680MB download (one-time). WebGPU required (Chrome/Edge 113+). On non-WebGPU browsers, falls back to whisper-small (510MB, fewer Arabic errors).
+                            </div>
                         </div>
+                        <hr>
                         <div class="field">
-                            <label class="label" for="claudeApiKey">
-                                <span data-translate="settings.claudeApiKey">Claude API Key</span>
-                            </label>
-                            <input type="password" id="claudeApiKey" name="claudeApiKey" class="input" autocomplete="new-password">
+                            <h3 class="subtitle is-6">💬 Chat LLM Model</h3>
+                            <div class="select is-fullwidth">
+                                <select id="webllmModelSelect">
+                                    <optgroup label="Bonsai (1-bit, tiny)">
+                                        <option value="Bonsai-1.7B" selected>🌱 Bonsai 1.7B (~200MB) ⭐ Default</option>
+                                        <option value="Ternary-Bonsai-1.7B">🌿 Ternary Bonsai 1.7B (~300MB)</option>
+                                    </optgroup>
+                                    <optgroup label="Small & Fast (~1-2GB)">
+                                        <option value="Qwen3-1.7B-q4f16_1-MLC">Qwen3 1.7B (~1.2GB) — Fast</option>
+                                        <option value="SmolLM2-1.7B-Instruct-q4f16_1-MLC">SmolLM2 1.7B (~1.1GB) — Fastest</option>
+                                        <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Llama 3.2 1B (~0.8GB) — Basic</option>
+                                    </optgroup>
+                                    <optgroup label="Medium (~2-3GB) — Recommended">
+                                        <option value="Qwen3-4B-q4f16_1-MLC">Qwen3 4B (~2.6GB) — Best balance</option>
+                                        <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Llama 3.2 3B (~2.1GB)</option>
+                                        <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen2.5 3B (~2.1GB)</option>
+                                    </optgroup>
+                                    <optgroup label="Large (~4-6GB) — Best Quality">
+                                        <option value="Qwen3-8B-q4f16_1-MLC">Qwen3 8B (~5.2GB)</option>
+                                        <option value="Llama-3.1-8B-Instruct-q4f16_1-MLC">Llama 3.1 8B (~5.0GB)</option>
+                                        <option value="Qwen3.5-4B-q4f16_1-MLC">Qwen3.5 4B (~2.8GB)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <p class="help">Runs in your browser via WebGPU. No API key needed. Cached after first download.</p>
                         </div>
+                        <div class="notification is-success is-light" style="margin-top: 1rem;">
+                            ✅ All browser AI features are <strong>free</strong> and <strong>private</strong>. No data leaves your device.
+                        </div>
+                        <hr>
                     </div>
-                    <div class="field">
-                        <h3 class="subtitle is-5" data-translate="settings.debugSection">Debug Settings</h3>
-                        <label class="checkbox">
-                            <input type="checkbox" id="debugMode">
-                            <span data-translate="settings.enableDebug">Enable Debug Mode</span>
-                        </label>
+
+                    <!-- Cloud AI section -->
+                    <div id="settings-cloud">
+                        <div class="field">
+                            <h3 class="subtitle is-6">OpenRouter API Key</h3>
+                            <input type="password" id="openrouterApiKey" name="openrouterApiKey" class="input" autocomplete="new-password" placeholder="sk-or-...">
+                            <p class="help">Get your key at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></p>
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6">☁️ Cloud Chat Model</h3>
+                            <div class="select is-fullwidth">
+                                <select id="cloudChatModel">
+                                    <option value="">Default (server chooses)</option>
+                                    <optgroup label="Qwen (multimodal)">
+                                        <option value="qwen/qwen3.7-plus">Qwen3.7 Plus — Multimodal, vision+text ⭐</option>
+                                        <option value="qwen/qwen3-235b-a22b">Qwen3 235B — Highest quality</option>
+                                    </optgroup>
+                                    <optgroup label="OpenAI">
+                                        <option value="openai/gpt-4o">GPT-4o — Best OpenAI</option>
+                                        <option value="openai/gpt-4o-mini">GPT-4o Mini — Fast & cheap</option>
+                                    </optgroup>
+                                    <optgroup label="Anthropic">
+                                        <option value="anthropic/claude-sonnet-4">Claude Sonnet 4 — Strong reasoning</option>
+                                        <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku — Fast</option>
+                                    </optgroup>
+                                    <optgroup label="Llama">
+                                        <option value="meta-llama/llama-4-maverick">Llama 4 Maverick — Latest</option>
+                                        <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+                                    </optgroup>
+                                    <optgroup label="Mistral">
+                                        <option value="mistralai/mistral-large-2411">Mistral Large</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <p class="help">Select "openrouter" as chat provider to use this model. Leave as "Default" to let OpenRouter choose.</p>
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6">🎙️ Cloud Transcription</h3>
+                            <div class="select is-fullwidth">
+                                <select id="cloudSttModel">
+                                    <option value="openrouter-mai-transcribe" selected>🏆 Microsoft MAI-Transcribe 1.5 — Fastest, proper punctuation ⭐</option>
+                                    <option value="openrouter-voxtral-mini">🌿 Mistral Voxtral Mini — Fast, good quality ($0.012)</option>
+                                    <option value="openrouter-gpt-4o-transcribe">☁️ OpenAI GPT-4o Transcribe — Some punctuation ($0.014)</option>
+                                    <option value="openrouter-gpt-4o-mini-transcribe">☁️ OpenAI GPT-4o Mini — Cheapest full transcript ($0.007)</option>
+                                    <option value="openrouter-whisper-1">☁️ OpenAI Whisper 1 — Original Whisper ($0.024)</option>
+                                    <option value="openrouter-whisper-large-v3">⚠️ OpenAI Whisper Large V3 — May truncate long audio</option>
+                                </select>
+                            </div>
+                            <div id="cloudSttInfo" class="notification is-warning is-light model-info-box">
+                                <strong>🏆 Microsoft MAI-Transcribe 1.5:</strong> 2690 chars / 4min. 3.6s. $0.024. Proper Arabic punctuation. Best quality.
+                            </div>
+                            <p class="help">No download needed. 4-min audio costs $0.007-$0.024. Upstream timeout: 60s per request.</p>
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6">⚡ Audio Speed (for cloud transcription)</h3>
+                            <div class="select is-fullwidth">
+                                <select id="audioSpeed">
+                                    <option value="1.0" selected>1.0x — Full quality, no speed-up ⭐ Default</option>
+                                    <option value="1.3">1.3x — 23% smaller, 99.4% quality</option>
+                                    <option value="1.4">1.4x — 29% smaller, 99.7% quality</option>
+                                    <option value="1.5">1.5x — 33% smaller, ~99.6% quality</option>
+                                    <option value="1.6">1.6x — 37% smaller, 99.6% quality</option>
+                                    <option value="1.7">1.7x — 41% smaller, 99.6% quality</option>
+                                    <option value="2.0">2.0x — 51% smaller, 99.1% quality</option>
+                                </select>
+                            </div>
+                            <div id="audioSpeedInfo" class="notification is-link is-light model-info-box">
+                                <strong>1.0x (default):</strong> Full quality. 4-min audio = 7.3MB upload. No quality loss.
+                            </div>
+                            <p class="help">Speed-up reduces upload size and processing time. Higher speeds may slightly affect word accuracy for Arabic.</p>
+                        </div>
+                        <div class="notification is-info is-light" style="margin-top: 1rem;">
+                            ☁️ Cloud models require an OpenRouter API key. Pay per use. Data is sent to OpenRouter servers for processing.
+                        </div>
+                        <hr>
+                    </div>
+
+                    <!-- Advanced section -->
+                    <div id="settings-advanced">
+                        <div class="field">
+                            <h3 class="subtitle is-6" data-translate="settings.googleSection">Google API Key</h3>
+                            <input type="password" id="googleApiKey" name="googleApiKey" class="input" autocomplete="new-password" placeholder="Google AI Studio key">
+                        </div>
+                        <div class="field">
+                            <h3 class="subtitle is-6" data-translate="settings.claudeSection">Claude API Key</h3>
+                            <input type="password" id="claudeApiKey" name="claudeApiKey" class="input" autocomplete="new-password" placeholder="Anthropic API key">
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6" data-translate="settings.debugSection">Debug</h3>
+                            <label class="checkbox">
+                                <input type="checkbox" id="debugMode">
+                                <span data-translate="settings.enableDebug">Enable Debug Mode</span>
+                            </label>
+                        </div>
                     </div>
                 </form>
             </section>
             <footer class="modal-card-foot">
                 <button type="submit" form="settingsForm" class="button is-primary" data-translate="settings.save">Save Settings</button>
+                <button type="button" id="resetSettings" class="button is-light">Reset to Defaults</button>
                 <button type="button" id="cancelSettings" class="button" data-translate="settings.cancel">Cancel</button>
             </footer>
         </div>
@@ -86,20 +210,17 @@
     <!-- Load dependencies first -->
     <script src="/translations.js"></script>
     <script src="/utils.js"></script>
+    <script src="/settings.js"></script>
     
     <!-- Load core functionality -->
     <script src="/js/router.js"></script>
 
     <!-- Initialize translations -->
     <script>
-        // Create a custom event for when translations are loaded
         const translationsLoaded = new Event('translationsLoaded');
-        
-        // Check if translations are already loaded
         if (window.translations) {
             document.dispatchEvent(translationsLoaded);
         } else {
-            // Watch for translations to be loaded
             Object.defineProperty(window, 'translations', {
                 set: function(value) {
                     this._translations = value;
@@ -113,27 +234,24 @@
         }
     </script>
     <script>
-        // Load menu first, then initialize main functionality
+        document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+        Settings.migrate();
+
         document.addEventListener('DOMContentLoaded', async () => {
-            // Load menu with fallback for Vercel
             async function loadMenu() {
                 try {
                     const response = await fetch('/menu.html');
-                    if (!response.ok) {
-                        throw new Error('Failed to load menu');
-                    }
+                    if (!response.ok) throw new Error('Failed to load menu');
                     const html = await response.text();
                     const menuContainer = document.getElementById('menu-container');
                     if (menuContainer) {
                         menuContainer.innerHTML = html;
-                        // Move menu container to top if it's not already there
                         const body = document.body;
                         if (body.firstChild !== menuContainer) {
                             body.insertBefore(menuContainer, body.firstChild);
                         }
                         initializeMenu();
-                    } else {
-                        console.error('Menu container not found');
                     }
                 } catch (error) {
                     console.error('Error loading menu:', error);
@@ -142,23 +260,28 @@
             
             await loadMenu();
             
-            // Load events.js and main.js after menu is loaded
             const eventsScript = document.createElement('script');
             eventsScript.src = '/events.js';
             document.body.appendChild(eventsScript);
             
-            // Load transcriber (browser-side Whisper fallback)
             const transcriberScript = document.createElement('script');
             transcriberScript.src = '/transcriber.js';
             document.body.appendChild(transcriberScript);
             
+            const chatLLMScript = document.createElement('script');
+            chatLLMScript.src = '/chat-llm.js';
+            document.body.appendChild(chatLLMScript);
+            
             const mainScript = document.createElement('script');
             mainScript.src = '/main.js';
             document.body.appendChild(mainScript);
+
+            mainScript.onload = () => {
+                Settings.initModal();
+            };
         });
 
         function initializeMenu() {
-            // Initialize navbar burger menu
             const burger = document.querySelector('.navbar-burger');
             const menu = document.querySelector('.navbar-menu');
             
@@ -169,7 +292,6 @@
                     menu.classList.toggle('is-active');
                 });
 
-                // Close menu when clicking outside
                 document.addEventListener('click', (e) => {
                     const isClickInside = burger.contains(e.target) || menu.contains(e.target);
                     if (!isClickInside && menu.classList.contains('is-active')) {
@@ -178,7 +300,6 @@
                     }
                 });
 
-                // Close menu when clicking a menu item
                 menu.addEventListener('click', (e) => {
                     if (e.target.closest('.navbar-item')) {
                         burger.classList.remove('is-active');
@@ -188,74 +309,23 @@
             }
 
             const languageSelect = document.getElementById('languageSelect');
-            const settingsModal = document.getElementById('settingsModal');
-            const settingsBtn = document.getElementById('settingsBtn');
-            const closeBtn = document.querySelector('.close');
-            const cancelBtn = document.getElementById('cancelSettings');
-            const debugMode = document.getElementById('debugMode');
-            const debugPanel = document.getElementById('debug');
-
-            // Load saved debug state
-            const settings = JSON.parse(localStorage.getItem('apiSettings') || '{}');
-            debugMode.checked = settings.debugMode || false;
-            debugPanel.style.display = debugMode.checked ? 'block' : 'none';
-
-            // Language switching
             if (languageSelect) {
-                // Set initial language from localStorage or default to 'en'
-                const savedLang = localStorage.getItem('selectedLanguage') || 'en';
+                const savedLang = Settings.get('selectedLanguage') || 'en';
                 languageSelect.value = savedLang;
                 document.documentElement.lang = savedLang;
                 document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr';
-                updateUILanguage(savedLang);
+                if (window.updateUILanguage) updateUILanguage(savedLang);
 
-                // Handle language changes
                 languageSelect.addEventListener('change', () => {
                     const selectedLang = languageSelect.value;
-                    localStorage.setItem('selectedLanguage', selectedLang);
+                    Settings.set('selectedLanguage', selectedLang);
                     document.documentElement.lang = selectedLang;
                     document.documentElement.dir = selectedLang === 'ar' ? 'rtl' : 'ltr';
                     
-                    // Toggle RTL stylesheet
                     const rtlStylesheet = document.querySelector('link[href*="bulma-rtl"]');
-                    rtlStylesheet.disabled = selectedLang !== 'ar';
+                    if (rtlStylesheet) rtlStylesheet.disabled = selectedLang !== 'ar';
                     
-                    updateUILanguage(selectedLang);
-                });
-            }
-
-            // Settings modal
-            if (settingsBtn && settingsModal) {
-                const openModal = () => settingsModal.classList.add('is-active');
-                const closeModal = () => settingsModal.classList.remove('is-active');
-
-                settingsBtn.addEventListener('click', openModal);
-                closeBtn.addEventListener('click', closeModal);
-                cancelBtn.addEventListener('click', closeModal);
-                settingsModal.querySelector('.modal-background').addEventListener('click', closeModal);
-
-                // Handle debug mode toggle
-                debugMode.addEventListener('change', (e) => {
-                    debugPanel.style.display = e.target.checked ? 'block' : 'none';
-                    const currentSettings = JSON.parse(localStorage.getItem('apiSettings') || '{}');
-                    currentSettings.debugMode = e.target.checked;
-                    localStorage.setItem('apiSettings', JSON.stringify(currentSettings));
-                });
-
-                // Handle settings form submission
-                const settingsForm = document.getElementById('settingsForm');
-                settingsForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    const settings = {
-                        googleApiKey: document.getElementById('googleApiKey').value.trim(),
-                        claudeApiKey: document.getElementById('claudeApiKey').value.trim(),
-                        debugMode: document.getElementById('debugMode').checked
-                    };
-                    
-                    localStorage.setItem('apiSettings', JSON.stringify(settings));
-                    const currentLang = languageSelect.value;
-                    showStatus(translations[currentLang].settings.saved, 'success');
-                    closeModal();
+                    if (window.updateUILanguage) updateUILanguage(selectedLang);
                 });
             }
         }

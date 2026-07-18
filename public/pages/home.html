@@ -9,18 +9,12 @@
         </div>
 
         <div class="field is-grouped is-grouped-multiline mt-4">
-            <div class="control is-expanded">
-                <div class="select is-fullwidth">
-                    <select id="providerSelect" aria-label="Select AI Provider">
-                        <option value="google" data-translate="providers.google">Google</option>
-                        <option value="koboldcpp" data-translate="providers.koboldcpp">Koboldcpp</option>
-                        <option value="claude" data-translate="providers.claude">Claude (Opus)</option>
-                        <option value="haiku" data-translate="providers.haiku">Claude (Haiku)</option>
-                        <option value="sonnet" data-translate="providers.sonnet">Claude (Sonnet)</option>
-                    </select>
-                </div>
+            <div class="control">
+                <button id="settingsBtn" class="button is-link is-light" aria-label="Settings">
+                    <span class="icon"><i class="fas fa-cog"></i></span>
+                    <span>Settings</span>
+                </button>
             </div>
-            
             <div class="control is-expanded">
                 <div class="select is-fullwidth">
                     <select id="captionLanguage" aria-label="Select Caption Language">
@@ -56,8 +50,12 @@
         </div>
 
         <div class="field mt-4">
-            <div class="control">
-                <button onclick="handleSubmit()" id="submitBtn" class="button is-primary is-fullwidth" data-translate="buttons.submit">Get Captions</button>
+            <div class="buttons">
+                <button onclick="handleSubmit()" id="submitBtn" class="button is-primary is-expanded" data-translate="buttons.submit">Get Captions</button>
+                <button onclick="showDownloadLinks()" id="downloadBtn" class="button is-success is-expanded">
+                    <span class="icon"><i class="fas fa-download"></i></span>
+                    <span>Download</span>
+                </button>
             </div>
         </div>
     </div>
@@ -75,12 +73,16 @@
         <div class="level mb-2">
             <div class="level-left"></div>
             <div class="level-right">
-                <button id="copyAllBtn" class="button is-small is-light">
-                    <span class="icon is-small">
-                        <i class="fas fa-copy"></i>
-                    </span>
-                    <span>Copy All</span>
-                </button>
+                <div class="buttons">
+                    <button id="historyBtn" class="button is-small is-info is-light" onclick="showHistoryPanel()">
+                        <span class="icon is-small"><i class="fas fa-history"></i></span>
+                        <span>History</span>
+                    </button>
+                    <button id="copyAllBtn" class="button is-small is-light">
+                        <span class="icon is-small"><i class="fas fa-copy"></i></span>
+                        <span>Copy All</span>
+                    </button>
+                </div>
             </div>
         </div>
         <div class="box chat-messages"></div>
