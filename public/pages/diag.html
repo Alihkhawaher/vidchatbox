@@ -1,3 +1,30 @@
+    <!-- 
+    STRICT NOTE FOR AI AGENTS:
+    For YouTube caption fetching:
+    - Never use the official YouTube API for captions
+    - Use direct loading approach for captions
+    - For backend: use youtube-captions-scraper package
+    - For frontend: use service worker proxy to handle CORS
+    Note: Google API usage is allowed for other features (e.g. chat functionality)
+
+    Implementation Details:
+    - Frontend uses a service worker (youtube-proxy-sw.js) to intercept and modify YouTube requests
+    - Service worker adds necessary headers and handles CORS
+    - This allows direct fetching without server dependency
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        // Register YouTube proxy service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/youtube-proxy-sw.js')
+                .then(registration => {
+                    console.log('YouTube proxy service worker registered:', registration);
+                })
+                .catch(error => {
+                    console.error('Service worker registration failed:', error);
+                });
+        }
+    </script>
     <div class="container is-max-desktop px-4 py-4">
         <h1 class="title is-2 has-text-centered mb-6">YouTube Summarizer Diagnostics</h1>
         
@@ -12,7 +39,8 @@
             <div class="field is-grouped">
                 <div class="control is-expanded">
                     <div class="select is-fullwidth">
-                        <select id="testProvider">
+                        <label for="testProvider" class="is-sr-only">Select Provider</label>
+                        <select id="testProvider" aria-label="Select Provider">
                             <option value="google">Google</option>
                             <option value="claude">Claude (Opus)</option>
                             <option value="haiku">Claude (Haiku)</option>
@@ -38,7 +66,8 @@
                 </div>
                 <div class="control">
                     <div class="select">
-                        <select id="language">
+                        <label for="language" class="is-sr-only">Select Language</label>
+                        <select id="language" aria-label="Select Language">
                             <option value="en">English</option>
                             <option value="ar">Arabic</option>
                             <option value="es">Spanish</option>
@@ -131,26 +160,55 @@
             const settings = JSON.parse(localStorage.getItem('apiSettings')) || {};
             const container = document.getElementById('providerStatus');
             
-            container.innerHTML = `
-                <div class="level mb-2">
-                    <div class="level-left">
-                        <div class="level-item">
-                            <span class="tag ${settings.googleApiKey ? 'is-success' : 'is-danger'} is-medium">
-                                Google API Key: ${settings.googleApiKey ? 'Configured' : 'Not Configured'}
-                            </span>
+            try {
+                // Check server API keys
+                const response = await fetch('/api/has-api-keys');
+                const { claude: serverClaude, google: serverGoogle } = await response.json();
+                
+                container.innerHTML = `
+                    <div class="level mb-2">
+                        <div class="level-left">
+                            <div class="level-item">
+                                <span class="tag ${settings.googleApiKey || serverGoogle ? 'is-success' : 'is-danger'} is-medium">
+                                    Google API Key: ${settings.googleApiKey ? 'User Configured' : (serverGoogle ? 'Server Configured' : 'Not Configured')}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="level mb-2">
-                    <div class="level-left">
-                        <div class="level-item">
-                            <span class="tag ${settings.claudeApiKey ? 'is-success' : 'is-danger'} is-medium">
-                                Claude API Key: ${settings.claudeApiKey ? 'Configured' : 'Not Configured'}
-                            </span>
+                    <div class="level mb-2">
+                        <div class="level-left">
+                            <div class="level-item">
+                                <span class="tag ${settings.claudeApiKey || serverClaude ? 'is-success' : 'is-danger'} is-medium">
+                                    Claude API Key: ${settings.claudeApiKey ? 'User Configured' : (serverClaude ? 'Server Configured' : 'Not Configured')}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            } catch (error) {
+                console.error('Error checking server API keys:', error);
+                // Fall back to just showing local storage status
+                container.innerHTML = `
+                    <div class="level mb-2">
+                        <div class="level-left">
+                            <div class="level-item">
+                                <span class="tag ${settings.googleApiKey ? 'is-success' : 'is-danger'} is-medium">
+                                    Google API Key: ${settings.googleApiKey ? 'User Configured' : 'Not Configured'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="level mb-2">
+                        <div class="level-left">
+                            <div class="level-item">
+                                <span class="tag ${settings.claudeApiKey ? 'is-success' : 'is-danger'} is-medium">
+                                    Claude API Key: ${settings.claudeApiKey ? 'User Configured' : 'Not Configured'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         // Test Provider
@@ -160,14 +218,27 @@
             const result = addResult('providerTests', `Testing ${provider} provider...`);
             
             try {
+                // Check if server has API keys
+                const serverKeysResponse = await fetch('/api/has-api-keys');
+                const { claude: serverClaude, google: serverGoogle } = await serverKeysResponse.json();
+
                 const headers = {
                     'Content-Type': 'application/json'
                 };
 
+                // Only add API key header if user has configured one (server will use its key if available)
                 if (provider === 'google' && settings.googleApiKey) {
                     headers['X-API-Key'] = settings.googleApiKey;
                 } else if (['claude', 'haiku', 'sonnet'].includes(provider) && settings.claudeApiKey) {
                     headers['X-API-Key'] = settings.claudeApiKey;
+                }
+
+                // Check if we have either user key or server key
+                const hasKey = (provider === 'google' && (settings.googleApiKey || serverGoogle)) ||
+                             (['claude', 'haiku', 'sonnet'].includes(provider) && (settings.claudeApiKey || serverClaude));
+                
+                if (!hasKey) {
+                    throw new Error('No API key configured (neither user nor server)');
                 }
 
                 const response = await fetch('/api/chat', {
@@ -315,42 +386,263 @@
             await testCaptions(videoId, lang);
         }
 
-        // Test captions for a specific video and language
+        // Test captions using both server and direct methods
         async function testCaptions(videoId, language) {
-            const result = addResult('captionTests', `Testing captions for video ID: ${videoId}, Language: ${language}...`);
+            const serverResult = addResult('captionTests', `Testing server endpoint for video ID: ${videoId}, Language: ${language}...`);
+            const fetchResult = addResult('captionTests', `Testing direct fetch for video ID: ${videoId}, Language: ${language}...`);
+            const axiosResult = addResult('captionTests', `Testing axios for video ID: ${videoId}, Language: ${language}...`);
             
             try {
+                // Test server endpoint
                 log(`Fetching captions from server`, 'info');
-                const startTime = performance.now();
+                const serverStartTime = performance.now();
                 
-                const response = await fetch(`/api/captions/${videoId}?lang=${language}&auto=true&timestamps=true`);
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.details || 'Failed to fetch captions');
+                const serverResponse = await fetch(`/api/captions/${videoId}?lang=${language}&auto=true&timestamps=true`);
+                console.log('Server Response:', serverResponse);
+                if (!serverResponse.ok) {
+                    const error = await serverResponse.json();
+                    console.error('Server Error:', error);
+                    throw new Error(error.details || 'Failed to fetch captions from server');
                 }
                 
-                const captions = await response.text();
-                const endTime = performance.now();
+                const serverCaptions = await serverResponse.text();
+                console.log('Server Captions:', serverCaptions);
+                const serverEndTime = performance.now();
                 
-                if (captions) {
-                    const preview = captions.split('\n').slice(0, 5).join('\n');
-                    updateResult(result, `
+                if (serverCaptions) {
+                    const serverPreview = serverCaptions.split('\n').slice(0, 5).join('\n');
+                    updateResult(serverResult, `
                         <div class="notification is-success is-light">
-                            <p class="mb-2">✅ Successfully fetched captions for ${language} (${(endTime - startTime).toFixed(2)}ms)</p>
-                            <pre class="has-background-white p-3">${preview}...</pre>
-                            <button onclick="showFullCaptions('${encodeURIComponent(captions)}')" class="button is-small is-info mt-3">Show Full Captions</button>
+                            <p class="mb-2">✅ Successfully fetched captions from server for ${language} (${(serverEndTime - serverStartTime).toFixed(2)}ms)</p>
+                            <pre class="has-background-white p-3">${serverPreview}...</pre>
+                            <button onclick="showFullCaptions('${encodeURIComponent(serverCaptions)}')" class="button is-small is-info mt-3">Show Full Server Captions</button>
                         </div>
                     `, 'success');
-                    log(`Successfully retrieved ${captions.length} characters of captions`, 'success');
-                    updateCaptionStats(captions);
+                    log(`Successfully retrieved ${serverCaptions.length} characters of captions from server`, 'success');
+                    updateCaptionStats(serverCaptions);
+                }
+
+                // Test direct fetch with different CORS bypass attempts
+                log(`Testing direct fetch approaches`, 'info');
+                const fetchStartTime = performance.now();
+                
+                // Attempt 1: no-cors mode
+                log('Attempt 1: no-cors mode', 'info');
+                const noCorsResponse = await fetch(`https://youtube.com/watch?v=${videoId}`, {
+                    mode: 'no-cors',
+                    credentials: 'omit'
+                });
+                console.log('No-CORS Response:', noCorsResponse);
+                console.log('No-CORS Type:', noCorsResponse.type);
+                console.log('No-CORS Status:', noCorsResponse.status);
+                console.log('No-CORS Headers:', Array.from(noCorsResponse.headers.entries()));
+
+                // Attempt 2: navigate mode
+                log('Attempt 2: navigate mode', 'info');
+                const navigateResponse = await fetch(`https://youtube.com/watch?v=${videoId}`, {
+                    mode: 'navigate',
+                    credentials: 'omit'
+                });
+                console.log('Navigate Response:', navigateResponse);
+                console.log('Navigate Type:', navigateResponse.type);
+                console.log('Navigate Status:', navigateResponse.status);
+                console.log('Navigate Headers:', Array.from(navigateResponse.headers.entries()));
+
+                // Attempt 3: HEAD request
+                log('Attempt 3: HEAD request', 'info');
+                const headResponse = await fetch(`https://youtube.com/watch?v=${videoId}`, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    credentials: 'omit'
+                });
+                console.log('HEAD Response:', headResponse);
+                console.log('HEAD Type:', headResponse.type);
+                console.log('HEAD Status:', headResponse.status);
+                console.log('HEAD Headers:', Array.from(headResponse.headers.entries()));
+
+                // Log results
+                const fetchResults = {
+                    noCors: {
+                        type: noCorsResponse.type,
+                        status: noCorsResponse.status,
+                        headers: Array.from(noCorsResponse.headers.entries())
+                    },
+                    navigate: {
+                        type: navigateResponse.type,
+                        status: navigateResponse.status,
+                        headers: Array.from(navigateResponse.headers.entries())
+                    },
+                    head: {
+                        type: headResponse.type,
+                        status: headResponse.status,
+                        headers: Array.from(headResponse.headers.entries())
+                    }
+                };
+                console.log('Fetch Results:', fetchResults);
+                
+                if (!fetchHtml.includes('captionTracks')) {
+                    throw new Error('No captions found for this video (fetch)');
+                }
+                
+                const fetchMatch = /"captionTracks":(\[.*?\])/.exec(fetchHtml);
+                if (!fetchMatch) {
+                    throw new Error('Could not extract caption tracks data (fetch)');
+                }
+                
+                const fetchTracks = JSON.parse(`{${fetchMatch[0]}}`).captionTracks;
+                const fetchTrack = fetchTracks.find(t => t.vssId === `.${language}` || t.vssId === `a.${language}`);
+                
+                if (!fetchTrack || !fetchTrack.baseUrl) {
+                    throw new Error(`No ${language} captions available (fetch)`);
+                }
+                
+                const fetchCaptionsResponse = await fetch(fetchTrack.baseUrl);
+                const fetchCaptionsXml = await fetchCaptionsResponse.text();
+                
+                // Parse XML and format with timestamps
+                const fetchParser = new DOMParser();
+                const fetchDoc = fetchParser.parseFromString(fetchCaptionsXml, 'text/xml');
+                const fetchTexts = Array.from(fetchDoc.getElementsByTagName('text')).map(text => {
+                    const start = parseFloat(text.getAttribute('start'));
+                    const hours = Math.floor(start / 3600);
+                    const minutes = Math.floor((start % 3600) / 60);
+                    const seconds = Math.floor(start % 60);
+                    const timestamp = `[${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
+                    return `${timestamp} ${text.textContent}`;
+                });
+                
+                const fetchCaptions = fetchTexts.join('\n');
+                const fetchEndTime = performance.now();
+
+                if (fetchCaptions) {
+                    const fetchPreview = fetchCaptions.split('\n').slice(0, 5).join('\n');
+                    updateResult(fetchResult, `
+                        <div class="notification is-success is-light">
+                            <p class="mb-2">✅ Successfully fetched captions using fetch for ${language} (${(fetchEndTime - fetchStartTime).toFixed(2)}ms)</p>
+                            <pre class="has-background-white p-3">${fetchPreview}...</pre>
+                            <button onclick="showFullCaptions('${encodeURIComponent(fetchCaptions)}')" class="button is-small is-info mt-3">Show Full Fetch Captions</button>
+                        </div>
+                    `, 'success');
+                    log(`Successfully retrieved ${fetchCaptions.length} characters of captions using fetch`, 'success');
+                }
+
+                // Test axios with different CORS bypass attempts
+                log(`Testing axios approaches`, 'info');
+                const axiosStartTime = performance.now();
+
+                // Attempt 1: no-cors mode
+                log('Attempt 1: axios no-cors', 'info');
+                try {
+                    const axiosNoCors = await axios.get(`https://youtube.com/watch?v=${videoId}`, {
+                        headers: {
+                            'Accept': '*/*',
+                            'Origin': window.location.origin
+                        },
+                        withCredentials: false
+                    });
+                    console.log('Axios No-CORS Response:', axiosNoCors);
+                } catch (error) {
+                    console.log('Axios No-CORS Error:', error.response || error);
+                }
+
+                // Attempt 2: with different headers
+                log('Attempt 2: axios with headers', 'info');
+                try {
+                    const axiosWithHeaders = await axios.get(`https://youtube.com/watch?v=${videoId}`, {
+                        headers: {
+                            'Accept': 'text/html',
+                            'User-Agent': navigator.userAgent,
+                            'Referer': 'https://www.youtube.com'
+                        },
+                        withCredentials: false
+                    });
+                    console.log('Axios Headers Response:', axiosWithHeaders);
+                } catch (error) {
+                    console.log('Axios Headers Error:', error.response || error);
+                }
+
+                // Attempt 3: HEAD request
+                log('Attempt 3: axios HEAD', 'info');
+                try {
+                    const axiosHead = await axios.head(`https://youtube.com/watch?v=${videoId}`, {
+                        headers: {
+                            'Accept': '*/*'
+                        },
+                        withCredentials: false
+                    });
+                    console.log('Axios HEAD Response:', axiosHead);
+                } catch (error) {
+                    console.log('Axios HEAD Error:', error.response || error);
+                }
+                
+                if (!axiosHtml.includes('captionTracks')) {
+                    throw new Error('No captions found for this video (axios)');
+                }
+                
+                const axiosMatch = /"captionTracks":(\[.*?\])/.exec(axiosHtml);
+                if (!axiosMatch) {
+                    throw new Error('Could not extract caption tracks data (axios)');
+                }
+                
+                const axiosTracks = JSON.parse(`{${axiosMatch[0]}}`).captionTracks;
+                const axiosTrack = axiosTracks.find(t => t.vssId === `.${language}` || t.vssId === `a.${language}`);
+                
+                if (!axiosTrack || !axiosTrack.baseUrl) {
+                    throw new Error(`No ${language} captions available (axios)`);
+                }
+                
+                const axiosCaptionsResponse = await axios.get(axiosTrack.baseUrl);
+                console.log('Axios Captions Response:', axiosCaptionsResponse);
+                const { data: axiosCaptionsXml } = axiosCaptionsResponse;
+                console.log('Axios Captions XML:', axiosCaptionsXml);
+                
+                // Parse XML and format with timestamps
+                const axiosParser = new DOMParser();
+                const axiosDoc = axiosParser.parseFromString(axiosCaptionsXml, 'text/xml');
+                const axiosTexts = Array.from(axiosDoc.getElementsByTagName('text')).map(text => {
+                    const start = parseFloat(text.getAttribute('start'));
+                    const hours = Math.floor(start / 3600);
+                    const minutes = Math.floor((start % 3600) / 60);
+                    const seconds = Math.floor(start % 60);
+                    const timestamp = `[${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}]`;
+                    return `${timestamp} ${text.textContent}`;
+                });
+                
+                const axiosCaptions = axiosTexts.join('\n');
+                const axiosEndTime = performance.now();
+
+                if (axiosCaptions) {
+                    const axiosPreview = axiosCaptions.split('\n').slice(0, 5).join('\n');
+                    updateResult(axiosResult, `
+                        <div class="notification is-success is-light">
+                            <p class="mb-2">✅ Successfully fetched captions using axios for ${language} (${(axiosEndTime - axiosStartTime).toFixed(2)}ms)</p>
+                            <pre class="has-background-white p-3">${axiosPreview}...</pre>
+                            <button onclick="showFullCaptions('${encodeURIComponent(axiosCaptions)}')" class="button is-small is-info mt-3">Show Full Axios Captions</button>
+                        </div>
+                    `, 'success');
+                    log(`Successfully retrieved ${axiosCaptions.length} characters of captions using axios`, 'success');
                 }
             } catch (error) {
                 log(`Error fetching captions: ${error.message}`, 'danger');
-                updateResult(result, `
-                    <div class="notification is-danger is-light">
-                        ❌ Error: ${error.message}
-                    </div>
-                `, 'error');
+                if (error.message.includes('server')) {
+                    updateResult(serverResult, `
+                        <div class="notification is-danger is-light">
+                            ❌ Error: ${error.message}
+                        </div>
+                    `, 'error');
+                } else if (error.message.includes('fetch')) {
+                    updateResult(fetchResult, `
+                        <div class="notification is-danger is-light">
+                            ❌ Error: ${error.message}
+                        </div>
+                    `, 'error');
+                } else if (error.message.includes('axios')) {
+                    updateResult(axiosResult, `
+                        <div class="notification is-danger is-light">
+                            ❌ Error: ${error.message}
+                        </div>
+                    `, 'error');
+                }
             }
         }
 

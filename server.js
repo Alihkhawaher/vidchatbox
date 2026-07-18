@@ -4,32 +4,26 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const captionsRouter = require('./routes/captions');
 const chatRouter = require('./routes/chat');
+const audioRouter = require('./routes/audio');
 
 const app = express();
 
 // Load environment variables
 require('dotenv').config();
 
+// Trust proxy for accurate IP detection behind reverse proxy
+app.set('trust proxy', 1);
+
 // Configure CORS based on environment
 const isProd = process.env.NODE_ENV === 'production';
-const corsOptions = {
-    origin: isProd ? 'https://youtube-summarizer.vercel.app' : 'http://localhost:3005',
+// Configure CORS
+app.use(cors({
+    origin: true, // Allow all origins
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: [
-        'Content-Type',
-        'x-api-key',
-        'X-Requested-With',
-        'Accept',
-        'Accept-Version',
-        'Content-Length',
-        'Content-MD5',
-        'Date',
-        'X-Api-Version'
-    ],
+    allowedHeaders: '*',
+    exposedHeaders: ['Access-Control-Allow-Origin'],
     credentials: true
-};
-
-app.use(cors(corsOptions));
+}));
 
 // Add security headers
 app.use((req, res, next) => {
@@ -60,7 +54,7 @@ app.use('/api', limiter);
 app.use(express.json({ limit: '50mb' }));
 
 // Serve static files from public directory
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Middleware to log all requests
 app.use((req, res, next) => {
@@ -84,6 +78,9 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api/captions', captionsRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/audio', audioRouter);
+app.use('/api/providers/claude', require('./providers/claude').router);
+app.use('/api/providers/google', require('./providers/google').router);
 
 // Serve index.html for all non-API routes to support client-side routing
 app.get('*', (req, res, next) => {
@@ -108,12 +105,68 @@ app.use((err, req, res, next) => {
     });
 });
 
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Handle SIGTERM signal
+process.on('SIGTERM', () => {
+    console.log('Received SIGTERM signal. Performing graceful shutdown...');
+    process.exit(0);
+});
+
+// Handle SIGINT signal
+process.on('SIGINT', () => {
+    console.log('Received SIGINT signal. Performing graceful shutdown...');
+    process.exit(0);
+});
+
+let server;
+
 // Start the server if we're not in production or being imported
 if (require.main === module) {
     const port = process.env.PORT || 3005;
-    app.listen(port, () => {
-        console.log(`${new Date().toISOString()} - Server running at http://localhost:${port}`);
+    server = app.listen(port, '0.0.0.0', () => {
+        console.log(`Server running on port ${port}`);
         console.log('Ready to process YouTube video captions');
+        // Send ready signal to PM2
+        if (process.send) {
+            process.send('ready');
+        }
+    });
+
+    // Handle server errors
+    server.on('error', (error) => {
+        if (error.syscall !== 'listen') {
+            console.error('Server error (non-listen):', error);
+            throw error;
+        }
+
+        switch (error.code) {
+            case 'EACCES':
+                console.error(`Port ${port} requires elevated privileges`);
+                process.exit(1);
+                break;
+            case 'EADDRINUSE':
+                console.error(`Port ${port} is already in use. Details:`, error);
+                // Try to get more information about what's using the port
+                require('child_process').exec(`netstat -ano | findstr :${port}`, (err, stdout, stderr) => {
+                    if (stdout) console.error(`Process using port ${port}:`, stdout);
+                    if (stderr) console.error('Error checking port:', stderr);
+                });
+                process.exit(1);
+                break;
+            default:
+                console.error('Unknown server error:', error);
+                throw error;
+        }
     });
 }
 

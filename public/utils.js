@@ -77,18 +77,40 @@ function extractVideoId(url) {
 }
 
 // API Helper Functions
-function getApiKey(provider) {
+function hasServerApiKey(provider) {
+    if (!window.serverApiKeys) return false;
+    if (provider === 'google') return window.serverApiKeys.google;
+    if (['claude', 'haiku', 'sonnet'].includes(provider)) return window.serverApiKeys.claude;
+    return false;
+}
+
+function getUserApiKey(provider) {
+    // Check localStorage first
     const settings = JSON.parse(localStorage.getItem('apiSettings') || '{}');
+    
+    // Check input fields
+    const googleInput = document.getElementById('googleApiKey');
+    const claudeInput = document.getElementById('claudeApiKey');
+    
     switch (provider.toLowerCase()) {
         case 'google':
-            return settings.googleApiKey;
+            return settings.googleApiKey || (googleInput ? googleInput.value.trim() : '');
         case 'claude':
         case 'haiku':
         case 'sonnet':
-            return settings.claudeApiKey;
+            return settings.claudeApiKey || (claudeInput ? claudeInput.value.trim() : '');
         default:
             return null;
     }
+}
+
+function getApiKey(provider) {
+    // Return user API key if available, otherwise indicate if server has key
+    const userKey = getUserApiKey(provider);
+    if (userKey) return userKey;
+    
+    // For server keys, return 'server' to indicate server has key
+    return hasServerApiKey(provider) ? 'server' : null;
 }
 
 // Language Helper Functions

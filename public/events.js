@@ -1,14 +1,99 @@
-// Event handling for video URL submission
-document.addEventListener('submit', async (e) => {
-    if (e.target.matches('#videoForm')) {
-        e.preventDefault();
-        await handleSubmit();
+// Provider API key management
+const ProviderManager = {
+    async checkProviderStatus(provider, userKey = null) {
+        try {
+            const headers = userKey ? { 'x-api-key': userKey } : {};
+            const response = await fetch(`/api/providers/${provider}/status`, { headers });
+            return await response.json();
+        } catch (error) {
+            console.error(`Error checking ${provider} status:`, error);
+            return { hasServerKey: false, hasValidUserKey: false, error: error.message };
+        }
+    },
+
+    async updateProviderUI(provider) {
+        const settings = JSON.parse(localStorage.getItem('apiSettings') || '{}');
+        const userKey = settings[`${provider}ApiKey`];
+        const status = await this.checkProviderStatus(provider, userKey);
+        
+        // Update input field if it exists
+        const inputField = document.getElementById(`${provider}ApiKey`);
+        if (inputField) {
+            // Remove existing help message
+            inputField.parentElement.querySelector('.help')?.remove();
+            
+            // Add appropriate help message (using textContent to prevent XSS)
+            if (status.hasServerKey) {
+                const helpEl = document.createElement('p');
+                helpEl.className = 'help is-info';
+                helpEl.textContent = 'Server API key available. You can still use your own key if preferred.';
+                inputField.parentElement.appendChild(helpEl);
+            } else if (status.error) {
+                const helpEl = document.createElement('p');
+                helpEl.className = 'help is-danger';
+                helpEl.textContent = status.error; // textContent, not innerHTML — prevents XSS
+                inputField.parentElement.appendChild(helpEl);
+            }
+        }
+
+        return status;
+    }
+};
+
+// Initialize provider API keys
+async function initializeServerApiKeys() {
+    const providerSelect = document.getElementById('providerSelect');
+    if (!providerSelect) return;
+
+    const currentProvider = providerSelect.value;
+    const status = await ProviderManager.updateProviderUI(currentProvider);
+    
+    logDebug('Provider status initialized:', {
+        provider: currentProvider,
+        status
+    });
+
+    return status;
+}
+
+// Event handling for settings modal — use .closest() for child element targeting
+document.addEventListener('click', async (e) => {
+    if (e.target.closest('#settingsBtn')) {
+        // Remove any existing help messages
+        document.querySelectorAll('.field .help').forEach(el => el.remove());
+        
+        // Check status for all providers
+        await Promise.all(['claude', 'google'].map(provider => 
+            ProviderManager.updateProviderUI(provider)
+        ));
     }
 });
 
-// Event handling for chat input
+// Initialize provider status when page loads
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeServerApiKeys();
+});
+
+// Handle provider selection changes (consolidated — single handler)
+document.addEventListener('change', async (e) => {
+    if (e.target.matches('#providerSelect')) {
+        const provider = e.target.value;
+        logDebug(`Provider changed to: ${provider}`);
+        await ProviderManager.updateProviderUI(provider);
+    }
+});
+
+// Event handling for chat form submission
 document.addEventListener('submit', async (e) => {
     if (e.target.matches('#chatForm')) {
+        e.preventDefault();
+        await sendMessage();
+    }
+});
+
+// Handle Enter key in chat input
+document.addEventListener('keypress', async (e) => {
+    if (e.target.matches('#chatInput') && e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         await sendMessage();
     }
@@ -21,11 +106,7 @@ document.addEventListener('click', (e) => {
         const [hours, minutes, seconds] = timestamp.split(':').map(Number);
         const totalSeconds = hours * 3600 + minutes * 60 + seconds;
         
-        // Log timestamp click
         logDebug(`Timestamp clicked: ${timestamp} (${totalSeconds} seconds)`);
-        
-        // You could implement timestamp-specific functionality here
-        // For example, scrolling to that part of the video if implemented
     }
 });
 
@@ -69,24 +150,6 @@ document.addEventListener('click', (e) => {
                     showError(translations[document.documentElement.lang || 'en'].install.copyError);
                 });
         }
-    }
-});
-
-// Event handling for provider selection
-document.addEventListener('change', (e) => {
-    if (e.target.matches('#providerSelect')) {
-        const provider = e.target.value;
-        const apiKey = getApiKey(provider);
-        const currentLang = document.documentElement.lang || 'en';
-        
-        // Check if API key is required and not set
-        if (['google', 'claude', 'haiku', 'sonnet'].includes(provider) && !apiKey) {
-            showError(translations[currentLang].errors.apiKeyRequired);
-            // Reset to default provider
-            e.target.value = 'koboldcpp';
-        }
-        
-        logDebug(`Provider changed to: ${provider}`);
     }
 });
 

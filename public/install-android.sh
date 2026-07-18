@@ -146,21 +146,33 @@ mkdir -p ~/.shortcuts
 cat > ~/.shortcuts/VidChatBox.sh << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 
+# Ensure we're in the right directory
+cd ~/vidchatbox
+
 # Function to start server if not running
 ensure_server_running() {
     if ! pgrep -f "node server.js" > /dev/null; then
+        # Acquire wake lock
         termux-wake-lock
-        cd ~/vidchatbox
-        node server.js &
-        sleep 2  # Wait for server to start
+        # Start server with proper detachment and logging
+        setsid node server.js >> ~/vidchatbox/server.log 2>&1 &
+        # Store PID
+        echo $! > ~/vidchatbox/server.pid
+        # Wait for server to start
+        sleep 3
     fi
 }
 
 # Start server if not running
 ensure_server_running
 
-# Open in browser
-termux-open-url "http://localhost:3005"
+# Check if server started successfully
+if pgrep -f "node server.js" > /dev/null; then
+    # Open in browser
+    termux-open-url "http://localhost:3005"
+else
+    termux-toast "Error: Server failed to start. Check logs."
+fi
 EOF
 chmod +x ~/.shortcuts/VidChatBox.sh
 
@@ -169,12 +181,22 @@ print_step "Creating server control widget..."
 cat > ~/.shortcuts/VidChatBox-Control.sh << 'EOF'
 #!/data/data/com.termux/files/usr/bin/bash
 
+cd ~/vidchatbox
+
 if pgrep -f "node server.js" > /dev/null; then
-    ~/bin/vidchatbox stop
+    pkill -f "node server.js"
+    rm -f ~/vidchatbox/server.pid
     termux-toast "VidChatBox Server Stopped"
 else
-    ~/bin/vidchatbox start
-    termux-toast "VidChatBox Server Started"
+    # Start server with proper detachment and logging
+    setsid node server.js >> ~/vidchatbox/server.log 2>&1 &
+    echo $! > ~/vidchatbox/server.pid
+    sleep 2
+    if pgrep -f "node server.js" > /dev/null; then
+        termux-toast "VidChatBox Server Started"
+    else
+        termux-toast "Error: Server failed to start. Check logs."
+    fi
 fi
 EOF
 chmod +x ~/.shortcuts/VidChatBox-Control.sh

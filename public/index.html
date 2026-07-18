@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Video Summarizer</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📹</text></svg>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma-rtl.min.css" disabled>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -145,6 +146,11 @@
             const eventsScript = document.createElement('script');
             eventsScript.src = '/events.js';
             document.body.appendChild(eventsScript);
+            
+            // Load transcriber (browser-side Whisper fallback)
+            const transcriberScript = document.createElement('script');
+            transcriberScript.src = '/transcriber.js';
+            document.body.appendChild(transcriberScript);
             
             const mainScript = document.createElement('script');
             mainScript.src = '/main.js';

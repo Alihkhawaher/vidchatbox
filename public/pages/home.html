@@ -11,7 +11,7 @@
         <div class="field is-grouped is-grouped-multiline mt-4">
             <div class="control is-expanded">
                 <div class="select is-fullwidth">
-                    <select id="providerSelect">
+                    <select id="providerSelect" aria-label="Select AI Provider">
                         <option value="google" data-translate="providers.google">Google</option>
                         <option value="koboldcpp" data-translate="providers.koboldcpp">Koboldcpp</option>
                         <option value="claude" data-translate="providers.claude">Claude (Opus)</option>
@@ -23,7 +23,7 @@
             
             <div class="control is-expanded">
                 <div class="select is-fullwidth">
-                    <select id="captionLanguage">
+                    <select id="captionLanguage" aria-label="Select Caption Language">
                         <option value="ar">Arabic</option>
                         <option value="en">English</option>
                         <option value="es">Spanish</option>
@@ -72,16 +72,27 @@
     <div id="captionsContent" class="box content is-hidden has-background-white-ter"></div>
 
     <div id="chatResponse" class="mt-6">
+        <div class="level mb-2">
+            <div class="level-left"></div>
+            <div class="level-right">
+                <button id="copyAllBtn" class="button is-small is-light">
+                    <span class="icon is-small">
+                        <i class="fas fa-copy"></i>
+                    </span>
+                    <span>Copy All</span>
+                </button>
+            </div>
+        </div>
         <div class="box chat-messages"></div>
     </div>
 
-    <div class="chat-input-container box mt-5">
+    <form id="chatForm" class="chat-input-container box mt-5">
         <div class="field has-addons">
             <div class="control is-expanded">
                 <input type="text" id="chatInput" class="input" data-translate="chatPlaceholder" placeholder="Type your message...">
             </div>
             <div class="control">
-                <button onclick="sendMessage()" id="sendBtn" class="button is-primary">
+                <button type="submit" id="sendBtn" class="button is-primary" aria-label="Send Message">
                     <span class="icon">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -90,26 +101,7 @@
                 </button>
             </div>
         </div>
-    </div>
+    </form>
 
     <div id="debug" class="box mt-6 is-hidden"></div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Update translations for provider options
-        const providerSelect = document.getElementById('providerSelect');
-        if (providerSelect) {
-            Array.from(providerSelect.options).forEach(option => {
-                const translationKey = option.getAttribute('data-translate');
-                if (translationKey) {
-                    const currentLang = document.getElementById('languageSelect')?.value || 'en';
-                    const translation = getNestedTranslation(translations[currentLang], translationKey);
-                    if (translation) {
-                        option.textContent = translation;
-                    }
-                }
-            });
-        }
-    });
-</script>

@@ -6,10 +6,7 @@ const google = require('../providers/google');
 const { ApiError, ErrorTypes } = require('../utils/api-utils');
 
 class ChatService {
-    static MAX_HISTORY = 10;
     static VALID_PROVIDERS = ['koboldcpp', 'claude', 'haiku', 'sonnet', 'google'];
-    
-    static chatHistory = [];
 
     static validateRequest(message, provider) {
         if (!message?.trim()) {
@@ -20,18 +17,7 @@ class ChatService {
         }
     }
 
-    static addToHistory(role, content) {
-        this.chatHistory.push({ role, content });
-        if (this.chatHistory.length > this.MAX_HISTORY) {
-            this.chatHistory = this.chatHistory.slice(-this.MAX_HISTORY);
-        }
-    }
-
-    static clearHistory() {
-        this.chatHistory = [];
-    }
-
-    static async generateResponse(message, captions, provider, apiKey) {
+    static async generateResponse(message, captions, provider, userApiKey) {
         let response;
         const context = captions?.trim() ? `Context from video captions:\n${captions}\n\nUser message: ${message}` : message;
         
@@ -43,11 +29,15 @@ class ChatService {
             case 'claude':
             case 'haiku':
             case 'sonnet':
+                // Use server API key as fallback if no user API key provided
+                const apiKey = userApiKey || process.env.CLAUDE_API_KEY;
                 response = await claude.generateResponse(context, '', provider, apiKey);
                 break;
             
             case 'google':
-                response = await google.generateResponse(context, '', apiKey);
+                // Use server API key as fallback if no user API key provided
+                const googleKey = userApiKey || process.env.GOOGLE_API_KEY;
+                response = await google.generateResponse(context, '', googleKey);
                 break;
             
             default:
@@ -72,16 +62,12 @@ router.post('/', async (req, res) => {
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        // Add user message to history
-        ChatService.addToHistory('user', message);
-
         // Handle streaming for Koboldcpp
         if (provider === 'koboldcpp') {
             await koboldcpp.generateResponse(message, captions || '', (streamResponse) => {
                 res.write(`data: ${JSON.stringify(streamResponse)}\n\n`);
                 
                 if (streamResponse.type === 'final') {
-                    ChatService.addToHistory('assistant', streamResponse.markdown);
                     res.end();
                 }
             });
@@ -90,10 +76,12 @@ router.post('/', async (req, res) => {
 
         // Handle other providers
         const response = await ChatService.generateResponse(message, captions, provider, userApiKey);
-        res.write(`data: ${JSON.stringify(response)}\n\n`);
         
-        if (response.type === 'final') {
-            ChatService.addToHistory('assistant', response.markdown);
+        // Only send successful responses, not error-shaped objects
+        if (response.type === 'error') {
+            res.write(`data: ${JSON.stringify(response)}\n\n`);
+        } else {
+            res.write(`data: ${JSON.stringify(response)}\n\n`);
         }
         res.end();
 
@@ -111,12 +99,6 @@ router.post('/', async (req, res) => {
         res.write(`data: ${JSON.stringify(errorResponse)}\n\n`);
         res.end();
     }
-});
-
-// Clear chat history
-router.post('/clear', (req, res) => {
-    ChatService.clearHistory();
-    res.json({ message: 'Chat history cleared' });
 });
 
 module.exports = router;

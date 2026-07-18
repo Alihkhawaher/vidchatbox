@@ -1,8 +1,47 @@
 const axios = require('axios');
-const { validateApiKey, handleApiError } = require('../utils/api-utils');
+const { handleApiError } = require('../utils/api-utils');
 const ProviderUtils = require('../utils/provider-utils');
 
-class ClaudeProvider {
+class ClaudeProvider extends ProviderUtils.BaseProvider {
+    static name = 'Claude';
+    
+    static getEnvKeyName() {
+        return 'CLAUDE_API_KEY';
+    }
+
+    static hasServerKey() {
+        return !!process.env[this.getEnvKeyName()];
+    }
+
+    static validateKey(key) {
+        if (!key || typeof key !== 'string' || !key.startsWith('sk-')) {
+            throw new Error('Invalid Claude API key format');
+        }
+    }
+
+    static async checkKeyValidity(key) {
+        try {
+            const response = await axios.post(
+                'https://api.anthropic.com/v1/messages',
+                {
+                    model: this.MODELS.claude,
+                    max_tokens: 1,
+                    messages: [{ role: 'user', content: 'test' }]
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': key,
+                        'anthropic-version': '2023-06-01'
+                    }
+                }
+            );
+            return response.status === 200;
+        } catch (error) {
+            return false;
+        }
+    }
+
     static MODELS = {
         claude: 'claude-3-opus-20240229',
         haiku: 'claude-3-haiku-20240307',
@@ -15,8 +54,7 @@ class ClaudeProvider {
 
     static async generateResponse(message, captions, provider, userApiKey = null) {
         try {
-            const apiKey = userApiKey || process.env.CLAUDE_API_KEY;
-            validateApiKey(apiKey, 'Claude');
+            const apiKey = await this.getValidKey(userApiKey);
 
             const prompt = ProviderUtils.preparePrompt(message, captions);
             const model = this.getModel(provider);
@@ -49,6 +87,29 @@ class ClaudeProvider {
     }
 }
 
+// Add router for provider-specific endpoints
+const express = require('express');
+const router = express.Router();
+
+// Endpoint to check API key status
+router.get('/status', async (req, res) => {
+    const userKey = ClaudeProvider.getKeyFromRequest(req);
+    try {
+        const hasValidKey = userKey ? await ClaudeProvider.checkKeyValidity(userKey) : false;
+        res.json({
+            hasServerKey: ClaudeProvider.hasServerKey(),
+            hasValidUserKey: hasValidKey
+        });
+    } catch (error) {
+        res.json({
+            hasServerKey: ClaudeProvider.hasServerKey(),
+            hasValidUserKey: false,
+            error: error.message
+        });
+    }
+});
+
 module.exports = {
-    generateResponse: ClaudeProvider.generateResponse.bind(ClaudeProvider)
+    generateResponse: ClaudeProvider.generateResponse.bind(ClaudeProvider),
+    router
 };

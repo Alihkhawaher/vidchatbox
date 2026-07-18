@@ -16,6 +16,7 @@ class Router {
             '/': '/pages/home.html',
             '/install-android': '/pages/install-android.html',
             '/diag': '/pages/diag.html',
+            '/diag2': '/pages/diag2.html',
             '/api-instructions': '/pages/api-instructions.html'
         };
 
@@ -163,6 +164,8 @@ class Router {
         switch(path) {
             case '/diag':
             case '/diag.html':
+            case '/diag2':
+            case '/diag2.html':
                 if (typeof showEnvironmentInfo === 'function') {
                     showEnvironmentInfo();
                 }
