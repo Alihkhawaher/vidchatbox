@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Lang Tools</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
+    <link rel="stylesheet" href="/libs/css/bulma.min.css">
+    <link rel="stylesheet" href="/libs/css/bulma-rtl.min.css" disabled>
+    <link rel="stylesheet" href="/libs/css/all.min.css">
+    <link rel="stylesheet" href="/styles.css?v=20260719-2">
+</head>
+<body>
+    <div id="menu-container"></div>
+
+    <!-- Main content area -->
+    <div id="content" class="container is-max-desktop px-4 py-4"></div>
+
+    <footer class="footer">
+        <div class="content has-text-centered">
+            <p>&copy; <span id="footerYear"></span> YouTube Lang Tools. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-background"></div>
+        <div class="modal-card">
+            <header class="modal-card-head">
+                <p class="modal-card-title" data-translate="settings.title">Settings</p>
+                <button class="delete close" aria-label="close"></button>
+            </header>
+            <section class="modal-card-body">
+                <form id="settingsForm" class="settings-form">
+                    <!-- AI Mode selector -->
+                    <div class="field">
+                        <label class="label is-small">AI Mode</label>
+                        <div class="select is-fullwidth">
+                            <select id="aiMode">
+                                <option value="local" selected>🌐 Local (Browser) — Free, private, works offline</option>
+                                <option value="cloud">☁️ Cloud (OpenRouter) — Higher quality, requires API key & internet</option>
+                                <option value="auto">🔄 Auto — Cloud when available, local fallback</option>
+                            </select>
+                        </div>
+                        <p class="help">Controls both transcription and chat. Cloud mode uses your OpenRouter API key. Auto mode tries cloud first, falls back to local.</p>
+                    </div>
+                    <hr>
+
+                    <!-- Browser AI (Local) section -->
+                    <div id="settings-local">
+                        <div class="field">
+                            <h3 class="subtitle is-6">🎙️ Transcription Model</h3>
+                            <div class="select is-fullwidth">
+                                <select id="whisperModelSelect">
+                                    <option value="whisper-medium" selected>⭐ whisper-medium (~1.7GB) — Best Arabic quality (WebGPU)</option>
+                                    <option value="whisper-small">🎯 whisper-small (~510MB) — Fallback / no WebGPU</option>
+                                </select>
+                            </div>
+                            <div id="whisperModelInfo" class="notification is-success is-light model-info-box">
+                                <strong>⭐ whisper-medium (q4):</strong> 7/7 Arabic key words correct. ~680MB download (one-time). WebGPU required (Chrome/Edge 113+). On non-WebGPU browsers, falls back to whisper-small (510MB, fewer Arabic errors).
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6">💬 Chat LLM Model</h3>
+                            <div class="select is-fullwidth">
+                                <select id="webllmModelSelect">
+                                    <optgroup label="Bonsai (1-bit, tiny)">
+                                        <option value="Bonsai-1.7B" selected>🌱 Bonsai 1.7B (~200MB) ⭐ Default</option>
+                                        <option value="Ternary-Bonsai-1.7B">🌿 Ternary Bonsai 1.7B (~300MB)</option>
+                                    </optgroup>
+                                    <optgroup label="Small & Fast (~1-2GB)">
+                                        <option value="Qwen3-1.7B-q4f16_1-MLC">Qwen3 1.7B (~1.2GB) — Fast</option>
+                                        <option value="SmolLM2-1.7B-Instruct-q4f16_1-MLC">SmolLM2 1.7B (~1.1GB) — Fastest</option>
+                                        <option value="Llama-3.2-1B-Instruct-q4f16_1-MLC">Llama 3.2 1B (~0.8GB) — Basic</option>
+                                    </optgroup>
+                                    <optgroup label="Medium (~2-3GB) — Recommended">
+                                        <option value="Qwen3-4B-q4f16_1-MLC">Qwen3 4B (~2.6GB) — Best balance</option>
+                                        <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Llama 3.2 3B (~2.1GB)</option>
+                                        <option value="Qwen2.5-3B-Instruct-q4f16_1-MLC">Qwen2.5 3B (~2.1GB)</option>
+                                    </optgroup>
+                                    <optgroup label="Large (~4-6GB) — Best Quality">
+                                        <option value="Qwen3-8B-q4f16_1-MLC">Qwen3 8B (~5.2GB)</option>
+                                        <option value="Llama-3.1-8B-Instruct-q4f16_1-MLC">Llama 3.1 8B (~5.0GB)</option>
+                                        <option value="Qwen3.5-4B-q4f16_1-MLC">Qwen3.5 4B (~2.8GB)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <p class="help">Runs in your browser via WebGPU. No API key needed. Cached after first download.</p>
+                        </div>
+                        <div class="notification is-success is-light" style="margin-top: 1rem;">
+                            ✅ All browser AI features are <strong>free</strong> and <strong>private</strong>. No data leaves your device.
+                        </div>
+                        <hr>
+                    </div>
+
+                    <!-- Cloud AI section -->
+                    <div id="settings-cloud">
+                        <div class="field">
+                            <h3 class="subtitle is-6">OpenRouter API Key</h3>
+                            <div class="field has-addons">
+                                <div class="control is-expanded">
+                                    <input type="password" id="openrouterApiKey" name="openrouterApiKey" class="input" autocomplete="new-password" placeholder="sk-or-...">
+                                </div>
+                                <div class="control">
+                                    <button type="button" class="button is-link is-light" onclick="document.getElementById('apiInstructionsModal').classList.add('is-active')">
+                                        <span class="icon is-small"><i class="fas fa-key"></i></span>
+                                        <span>Get Key</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="help">Get your key at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a> or click "Get Key" for instructions.</p>
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6">☁️ Cloud Chat Model</h3>
+                            <div class="select is-fullwidth">
+                                <select id="cloudChatModel">
+                                    <option value="">Default (server chooses)</option>
+                                    <optgroup label="Qwen (multimodal)">
+                                        <option value="qwen/qwen3.7-plus">Qwen3.7 Plus — Multimodal, vision+text ⭐</option>
+                                        <option value="qwen/qwen3-235b-a22b">Qwen3 235B — Highest quality</option>
+                                    </optgroup>
+                                    <optgroup label="OpenAI">
+                                        <option value="openai/gpt-4o">GPT-4o — Best OpenAI</option>
+                                        <option value="openai/gpt-4o-mini">GPT-4o Mini — Fast & cheap</option>
+                                    </optgroup>
+                                    <optgroup label="Anthropic">
+                                        <option value="anthropic/claude-sonnet-4">Claude Sonnet 4 — Strong reasoning</option>
+                                        <option value="anthropic/claude-3.5-haiku">Claude 3.5 Haiku — Fast</option>
+                                    </optgroup>
+                                    <optgroup label="Llama">
+                                        <option value="meta-llama/llama-4-maverick">Llama 4 Maverick — Latest</option>
+                                        <option value="meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B</option>
+                                    </optgroup>
+                                    <optgroup label="Mistral">
+                                        <option value="mistralai/mistral-large-2411">Mistral Large</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <p class="help">Select "openrouter" as chat provider to use this model. Leave as "Default" to let OpenRouter choose.</p>
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6">🎙️ Cloud Transcription</h3>
+                            <div class="select is-fullwidth">
+                                <select id="cloudSttModel">
+                                    <option value="openrouter-mai-transcribe" selected>🏆 Microsoft MAI-Transcribe 1.5 — Fastest, proper punctuation ⭐</option>
+                                    <option value="openrouter-gpt-4o-transcribe">☁️ OpenAI GPT-4o Transcribe — Some punctuation ($0.014)</option>
+                                    <option value="openrouter-gpt-4o-mini-transcribe">☁️ OpenAI GPT-4o Mini — Cheapest full transcript ($0.007)</option>
+                                    <option value="openrouter-whisper-1">☁️ OpenAI Whisper 1 — Original Whisper ($0.024)</option>
+                                    <option value="openrouter-whisper-large-v3">⚠️ OpenAI Whisper Large V3 — May truncate long audio</option>
+                                </select>
+                            </div>
+                            <div id="cloudSttInfo" class="notification is-warning is-light model-info-box">
+                                <strong>🏆 Microsoft MAI-Transcribe 1.5:</strong> 2690 chars / 4min. 3.6s. $0.024. Proper Arabic punctuation (، . ؟). Best quality.
+                            </div>
+                            <p class="help">No download needed. 4-min audio costs $0.007-$0.024. Upstream timeout: 60s per request.</p>
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6">🌐 Subtitle Translation Model</h3>
+                            <div class="select is-fullwidth">
+                                <select id="translationModel">
+                                    <optgroup label="⚡ Fast & Cheap (recommended for subtitles)">
+                                        <option value="deepseek/deepseek-v4-flash" selected>DeepSeek V4 Flash — $0.14/$0.28/M, ~4s latency ⭐</option>
+                                        <option value="deepseek/deepseek-v4-pro">DeepSeek V4 Pro — $0.44/$0.87/M, 1.6T MoE</option>
+                                        <option value="google/gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite — $0.10/$0.40/M, ultra-fast</option>
+                                        <option value="google/gemini-2.5-flash">Gemini 2.5 Flash — $0.15/$0.60/M, strong multilingual</option>
+                                        <option value="openai/gpt-5-nano">GPT-5 Nano — $0.05/$0.40/M, cheapest OpenAI</option>
+                                    </optgroup>
+                                    <optgroup label="🔥 Fast & High Quality">
+                                        <option value="google/gemini-3.0-flash">Gemini 3.0 Flash — $0.50/$3.00/M, frontier quality</option>
+                                        <option value="openai/gpt-4.1-nano">GPT-4.1 Nano — $0.10/$0.40/M, proven stable</option>
+                                        <option value="mistralai/mistral-small-latest">Mistral Small 3.2 — $0.06/$0.18/M, excellent European</option>
+                                        <option value="qwen/qwen3-30b-a3b">Qwen3 30B A3B — $0.10/$0.30/M, strong Asian</option>
+                                    </optgroup>
+                                    <optgroup label="💰 Budget">
+                                        <option value="deepseek/deepseek-v3.2">DeepSeek V3.2 — $0.14/$0.28/M, great CJK</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <p class="help">Flash models recommended for subtitles — fast and cost-effective. Prices per 1M tokens via OpenRouter.</p>
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6">⚡ Audio Speed (for cloud transcription)</h3>
+                            <div class="select is-fullwidth">
+                                <select id="audioSpeed">
+                                    <option value="1.0" selected>1.0x — Full quality, no speed-up ⭐ Default</option>
+                                    <option value="1.3">1.3x — 23% smaller, 99.4% quality</option>
+                                    <option value="1.4">1.4x — 29% smaller, 99.7% quality</option>
+                                    <option value="1.5">1.5x — 33% smaller, ~99.6% quality</option>
+                                    <option value="1.6">1.6x — 37% smaller, 99.6% quality</option>
+                                    <option value="1.7">1.7x — 41% smaller, 99.6% quality</option>
+                                    <option value="2.0">2.0x — 51% smaller, 99.1% quality</option>
+                                </select>
+                            </div>
+                            <div id="audioSpeedInfo" class="notification is-link is-light model-info-box">
+                                <strong>1.0x (default):</strong> Full quality. 4-min audio = 7.3MB upload. No quality loss.
+                            </div>
+                            <p class="help">Speed-up reduces upload size and processing time. Higher speeds may slightly affect word accuracy for Arabic.</p>
+                        </div>
+                        <div class="notification is-info is-light" style="margin-top: 1rem;">
+                            ☁️ Cloud models require an OpenRouter API key. Pay per use. Data is sent to OpenRouter servers for processing.
+                        </div>
+                        <hr>
+                    </div>
+
+                    <!-- P2P Sharing section -->
+                    <div id="settings-p2p">
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6">🌐 Peer-to-Peer Subtitle Sharing</h3>
+                            <p class="help" style="margin-bottom:0.75rem;">Share subtitles directly with other users via WebRTC. No data passes through any server.</p>
+                            <label class="checkbox">
+                                <input type="checkbox" id="p2pEnabled" checked>
+                                <span>Enable P2P Sharing</span>
+                            </label>
+                            <label class="checkbox" style="margin-top:0.5rem;">
+                                <input type="checkbox" id="p2pShareEnabled" checked>
+                                <span>Share my cached subtitles with other users</span>
+                            </label>
+                        </div>
+                        <div class="field" style="margin-top:0.75rem;">
+                            <h3 class="subtitle is-6">Room Mode</h3>
+                            <div class="select is-fullwidth">
+                                <select id="p2pRoomMode">
+                                    <option value="public" selected>🌐 Public Room — Join all users in one room</option>
+                                    <option value="custom">🔒 Custom Room — Private room with share link/QR</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="p2pCustomRoomField" class="field" style="margin-top:0.5rem;display:none;">
+                            <h3 class="subtitle is-6">Custom Room ID</h3>
+                            <div class="field has-addons">
+                                <div class="control is-expanded">
+                                    <input type="text" id="p2pCustomRoom" class="input" placeholder="e.g. ABC123" maxlength="20">
+                                </div>
+                                <div class="control">
+                                    <button type="button" class="button is-info is-light" id="p2pGenerateRoom">Generate</button>
+                                </div>
+                            </div>
+                            <div id="p2pQrPreview" style="display:none;text-align:center;margin-top:0.5rem;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced section -->
+                    <div id="settings-advanced">
+                        <div class="field">
+                            <h3 class="subtitle is-6" data-translate="settings.appearanceSection">Appearance</h3>
+                            <div class="select is-fullwidth">
+                                <select id="themeSelect">
+                                    <option value="system" data-translate="settings.themeSystem">System default</option>
+                                    <option value="light" data-translate="settings.themeLight">Light</option>
+                                    <option value="dark" data-translate="settings.themeDark">Dark</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <h3 class="subtitle is-6" data-translate="settings.googleSection">Google API Key</h3>
+                            <input type="password" id="googleApiKey" name="googleApiKey" class="input" autocomplete="new-password" placeholder="Google AI Studio key">
+                        </div>
+                        <div class="field">
+                            <h3 class="subtitle is-6" data-translate="settings.claudeSection">Claude API Key</h3>
+                            <input type="password" id="claudeApiKey" name="claudeApiKey" class="input" autocomplete="new-password" placeholder="Anthropic API key">
+                        </div>
+                        <hr>
+                        <div class="field">
+                            <h3 class="subtitle is-6" data-translate="settings.debugSection">Debug</h3>
+                            <label class="checkbox">
+                                <input type="checkbox" id="debugMode">
+                                <span data-translate="settings.enableDebug">Enable Debug Mode</span>
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </section>
+            <footer class="modal-card-foot">
+                <button type="submit" form="settingsForm" class="button is-primary" data-translate="settings.save">Save Settings</button>
+                <button type="button" id="resetSettings" class="button is-light">Reset to Defaults</button>
+                <button type="button" id="cancelSettings" class="button" data-translate="settings.cancel">Cancel</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- API Instructions Modal -->
+    <div id="apiInstructionsModal" class="modal">
+        <div class="modal-background" onclick="document.getElementById('apiInstructionsModal').classList.remove('is-active')"></div>
+        <div class="modal-card" style="width:min(95%,650px)">
+            <header class="modal-card-head">
+                <p class="modal-card-title"><span class="icon"><i class="fas fa-key"></i></span> How to Get API Keys</p>
+                <button class="delete" aria-label="close" onclick="document.getElementById('apiInstructionsModal').classList.remove('is-active')"></button>
+            </header>
+            <section class="modal-card-body">
+                <!-- OpenRouter (Primary) -->
+                <div class="notification is-primary is-light mb-4">
+                    <p><strong><i class="fas fa-star"></i> OpenRouter</strong> — One key for all cloud AI features (transcription, chat, translation)</p>
+                </div>
+                <div class="content">
+                    <ol>
+                        <li>Visit <a href="https://openrouter.ai/keys" target="_blank" class="has-text-link"><strong>openrouter.ai/keys</strong></a></li>
+                        <li>Sign up or log in (Google/GitHub login supported)</li>
+                        <li>Click <strong>"Create Key"</strong></li>
+                        <li>Copy the key (starts with <code>sk-or-</code>)</li>
+                        <li>In YouTube Lang Tools → <strong>Settings</strong> → paste in <strong>"OpenRouter API Key"</strong></li>
+                    </ol>
+                    <div class="notification is-info is-light">
+                        <strong>💡 Cost:</strong> Transcription ~$0.024/video. Chat ~$0.01/message. Translation ~$0.001/video. Most features cost less than $0.05 per video.
+                    </div>
+                </div>
+                <hr>
+                <!-- Google (Optional) -->
+                <details class="mb-4">
+                    <summary class="has-text-weight-semibold" style="cursor:pointer"><i class="fab fa-google"></i> Google API Key <span class="tag is-light">Optional</span></summary>
+                    <div class="content mt-2">
+                        <ol>
+                            <li>Go to <a href="https://console.cloud.google.com/" target="_blank" class="has-text-link">Google Cloud Console</a></li>
+                            <li>Create a project → Enable <strong>Gemini API</strong></li>
+                            <li>Go to <strong>APIs & Services → Credentials</strong></li>
+                            <li>Click <strong>"Create Credentials" → "API Key"</strong></li>
+                            <li>Paste in YouTube Lang Tools → Settings → <strong>"Google API Key"</strong></li>
+                        </ol>
+                    </div>
+                </details>
+                <!-- Claude (Optional) -->
+                <details class="mb-4">
+                    <summary class="has-text-weight-semibold" style="cursor:pointer"><i class="fas fa-robot"></i> Claude API Key <span class="tag is-light">Optional</span></summary>
+                    <div class="content mt-2">
+                        <ol>
+                            <li>Visit <a href="https://console.anthropic.com/" target="_blank" class="has-text-link">console.anthropic.com</a></li>
+                            <li>Sign up or log in</li>
+                            <li>Navigate to <strong>API Keys</strong> → <strong>"Create Key"</strong></li>
+                            <li>Paste in YouTube Lang Tools → Settings → <strong>"Claude API Key"</strong></li>
+                        </ol>
+                    </div>
+                </details>
+                <div class="notification is-success is-light">
+                    <strong>🔒 Privacy:</strong> All API keys are stored locally in your browser (localStorage). They are sent only to the respective API providers via our server proxy — we never store or log them.
+                </div>
+            </section>
+            <footer class="modal-card-foot">
+                <button class="button is-primary" onclick="document.getElementById('apiInstructionsModal').classList.remove('is-active')">Got it</button>
+                <button class="button" onclick="document.getElementById('apiInstructionsModal').classList.remove('is-active')">Close</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Debug Panel (hidden by default) -->
+    <div id="debug" class="debug-panel" style="display: none;">
+        <div class="debug-content"></div>
+    </div>
+
+    <!-- Load dependencies first -->
+    <script src="/translations.js?v=20260719-2"></script>
+    <script src="/utils.js"></script>
+    <script src="/settings.js?v=20260719-2"></script>
+    
+    <!-- Load core functionality -->
+    <script src="/js/router.js?v=20260719-2"></script>
+
+    <!-- Initialize translations -->
+    <script>
+        const translationsLoaded = new Event('translationsLoaded');
+        if (window.translations) {
+            document.dispatchEvent(translationsLoaded);
+        } else {
+            Object.defineProperty(window, 'translations', {
+                set: function(value) {
+                    this._translations = value;
+                    console.log('Translations loaded successfully');
+                    document.dispatchEvent(translationsLoaded);
+                },
+                get: function() {
+                    return this._translations;
+                }
+            });
+        }
+    </script>
+    <script>
+        document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+        Settings.migrate();
+        Settings.applyTheme();
+
+        window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
+            if (Settings.get('theme') === 'system') Settings.applyTheme('system');
+        });
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            async function loadMenu() {
+                try {
+                    const response = await fetch('/menu.html');
+                    if (!response.ok) throw new Error('Failed to load menu');
+                    const html = await response.text();
+                    const menuContainer = document.getElementById('menu-container');
+                    if (menuContainer) {
+                        menuContainer.innerHTML = html;
+                        const body = document.body;
+                        if (body.firstChild !== menuContainer) {
+                            body.insertBefore(menuContainer, body.firstChild);
+                        }
+                        initializeMenu();
+                    }
+                } catch (error) {
+                    console.error('Error loading menu:', error);
+                }
+            }
+            
+            await loadMenu();
+            
+            const eventsScript = document.createElement('script');
+            eventsScript.src = '/events.js';
+            document.body.appendChild(eventsScript);
+            
+            const transcriberScript = document.createElement('script');
+            transcriberScript.src = '/transcriber.js';
+            document.body.appendChild(transcriberScript);
+            
+            const chatLLMScript = document.createElement('script');
+            chatLLMScript.src = '/chat-llm.js';
+            document.body.appendChild(chatLLMScript);
+            
+            // P2P dependencies (loaded before main.js)
+            const trysteroScript = document.createElement('script');
+            trysteroScript.src = '/libs/trystero/trystero.bundle.js';
+            trysteroScript.onerror = () => console.warn('[P2P] Trystero bundle failed to load');
+            document.body.appendChild(trysteroScript);
+
+            const qrScript = document.createElement('script');
+            qrScript.src = '/libs/qrcode/qrcode.bundle.js';
+            qrScript.onerror = () => console.warn('[P2P] QR code bundle failed to load');
+            document.body.appendChild(qrScript);
+
+            const p2pScript = document.createElement('script');
+            p2pScript.src = '/p2p.js?v=20260726-1';
+            p2pScript.onerror = () => console.warn('[P2P] p2p.js failed to load');
+            document.body.appendChild(p2pScript);
+
+            const mainScript = document.createElement('script');
+            mainScript.src = '/main.js?v=20260726-8';
+
+            document.body.appendChild(mainScript);
+
+            mainScript.onload = () => {
+                Settings.initModal();
+
+                // ─── P2P Auto-Init (navbar status indicator) ────
+                if (Settings.get('p2pEnabled') !== false && window.P2P) {
+                    const p2pControl = document.getElementById('p2pStatusControl');
+                    const p2pDot = document.getElementById('p2pStatusDot');
+                    const p2pText = document.getElementById('p2pStatusText');
+                    if (p2pControl) p2pControl.style.display = '';
+
+                    P2P.init(null, {
+                        onPeerUpdate: (count) => {
+                            if (p2pDot) {
+                                p2pDot.style.color = count > 0 ? '#48c774' : '#ffdd57';
+                            }
+                            if (p2pText) {
+                                p2pText.textContent = count > 0 ? `P2P · ${count}` : 'P2P';
+                            }
+                        }
+                    });
+                    P2P.broadcastIndex();
+
+                    // Show connected state after brief delay (Nostr relay connection)
+                    setTimeout(() => {
+                        if (p2pDot && P2P.getPeerCount() === 0) {
+                            p2pDot.style.color = '#48c774';
+                        }
+                    }, 4000);
+
+                    // Click badge → show room info
+                    const p2pBtn = document.getElementById('p2pStatusBtn');
+                    if (p2pBtn) {
+                        p2pBtn.addEventListener('click', () => {
+                            const info = P2P.getRoomInfo();
+                            const peerLabel = info.peerCount === 1 ? 'peer' : 'peers';
+                            const msg = `P2P Network\nRoom: ${info.isPublic ? 'Public' : info.roomId}\n${info.peerCount} ${peerLabel} online\n${Object.keys(info.myIndex).length} videos cached`;
+                            alert(msg);
+                        });
+                    }
+                }
+
+                const chatUIScript = document.createElement('script');
+                chatUIScript.src = '/chat-ui.js?v=20260722-1';
+                document.body.appendChild(chatUIScript);
+            };
+        });
+
+        function initializeMenu() {
+            const burger = document.querySelector('.navbar-burger');
+            const menu = document.querySelector('.navbar-menu');
+            
+            if (burger && menu) {
+                burger.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    burger.classList.toggle('is-active');
+                    menu.classList.toggle('is-active');
+                });
+
+                document.addEventListener('click', (e) => {
+                    const isClickInside = burger.contains(e.target) || menu.contains(e.target);
+                    if (!isClickInside && menu.classList.contains('is-active')) {
+                        burger.classList.remove('is-active');
+                        menu.classList.remove('is-active');
+                    }
+                });
+
+                menu.addEventListener('click', (e) => {
+                    if (e.target.closest('.navbar-item')) {
+                        burger.classList.remove('is-active');
+                        menu.classList.remove('is-active');
+                    }
+                });
+            }
+
+            /* --- Language Toggle --- */
+            function updateLanguageToggle() {
+                const label = document.getElementById('languageLabel');
+                if (!label) return;
+                const lang = Settings.get('selectedLanguage') || 'en';
+                label.textContent = lang === 'en' ? 'العربية' : 'English';
+            }
+
+            function applyLanguage(lang) {
+                Settings.set('selectedLanguage', lang);
+                document.documentElement.lang = lang;
+                document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+                const rtlStylesheet = document.querySelector('link[href*="bulma-rtl"]');
+                if (rtlStylesheet) rtlStylesheet.disabled = lang !== 'ar';
+                if (window.updateUILanguage) updateUILanguage(lang);
+                updateLanguageToggle();
+                if (typeof updateNavThemeToggle === 'function') updateNavThemeToggle();
+            }
+
+            // Init on load
+            const savedLang = Settings.get('selectedLanguage') || 'en';
+            document.documentElement.lang = savedLang;
+            document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr';
+            if (window.updateUILanguage) updateUILanguage(savedLang);
+            updateLanguageToggle();
+
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('#languageToggle')) {
+                    const next = (Settings.get('selectedLanguage') || 'en') === 'en' ? 'ar' : 'en';
+                    applyLanguage(next);
+                }
+            });
+
+            /* --- Navbar Theme Toggle --- */
+            function updateNavThemeToggle() {
+                const btn = document.getElementById('navThemeToggle');
+                if (!btn) return;
+                const dark = document.documentElement.dataset.theme === 'dark';
+                btn.querySelector('i').className = `fas fa-${dark ? 'sun' : 'moon'}`;
+                const label = document.getElementById('navThemeLabel');
+                if (label) {
+                    const lang = Settings.get('selectedLanguage') || 'en';
+                    const key = dark ? 'light' : 'dark';
+                    if (window.translations && translations[lang] && translations[lang].buttons) {
+                        label.textContent = translations[lang].buttons[key] || (dark ? 'Light' : 'Dark');
+                    } else {
+                        label.textContent = dark ? 'Light' : 'Dark';
+                    }
+                }
+            }
+
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('#navThemeToggle')) {
+                    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+                    Settings.set('theme', next);
+                    Settings.applyTheme(next);
+                }
+            });
+
+            document.addEventListener('themeChanged', updateNavThemeToggle);
+            updateNavThemeToggle();
+        }
+    </script>
+</body>
+</html>

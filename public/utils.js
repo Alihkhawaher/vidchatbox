@@ -1,0 +1,175 @@
+// UI Helper Functions
+function showElement(id) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.style.display = 'block';
+    }
+}
+
+function hideElement(id) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.style.display = 'none';
+    }
+}
+
+function setElementText(id, text) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = text;
+    }
+}
+
+function disableButton(id, disabled) {
+    const button = document.getElementById(id);
+    if (button) {
+        button.disabled = disabled;
+        button.classList.toggle('is-loading', disabled);
+    }
+}
+
+function showError(message) {
+    showToast(message, 'danger', 5000);
+}
+
+function showStatus(message, type = 'info') {
+    showToast(message, type, 4000);
+}
+
+function showToast(message, type = 'info', duration = 4000) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<span>${escapeHtml(message)}</span><button class="toast-close" aria-label="close">&times;</button>`;
+    container.appendChild(toast);
+    const dismiss = () => {
+        toast.classList.add('toast-out');
+        toast.addEventListener('animationend', () => toast.remove());
+    };
+    toast.querySelector('.toast-close').onclick = dismiss;
+    setTimeout(dismiss, duration);
+}
+
+function logDebug(message, data = null) {
+    const settings = JSON.parse(localStorage.getItem('vidchatbox_settings') || '{}');
+    if (!settings.debugMode) return;
+
+    const debugPanel = document.querySelector('#debug .debug-content');
+    if (!debugPanel) return;
+
+    const timestamp = new Date().toISOString();
+    const logEntry = document.createElement('div');
+    logEntry.className = 'debug-entry';
+    
+    let logMessage = `[${timestamp}] ${message}`;
+    if (data) {
+        try {
+            logMessage += '\n' + JSON.stringify(data, null, 2);
+        } catch (e) {
+            logMessage += '\n[Unable to stringify data]';
+        }
+    }
+    
+    logEntry.textContent = logMessage;
+    debugPanel.appendChild(logEntry);
+    debugPanel.scrollTop = debugPanel.scrollHeight;
+}
+
+// URL Helper Functions
+function extractVideoId(url) {
+    const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    return match ? match[1] : null;
+}
+
+// API Helper Functions
+function hasServerApiKey(provider) {
+    if (!window.serverApiKeys) return false;
+    if (provider === 'google') return window.serverApiKeys.google;
+    if (['claude', 'haiku', 'sonnet'].includes(provider)) return window.serverApiKeys.claude;
+    return false;
+}
+
+function getUserApiKey(provider) {
+    // Check localStorage first
+    const settings = JSON.parse(localStorage.getItem('vidchatbox_settings') || '{}');
+    
+    // Check input fields
+    const googleInput = document.getElementById('googleApiKey');
+    const claudeInput = document.getElementById('claudeApiKey');
+    
+    switch (provider.toLowerCase()) {
+        case 'google':
+            return settings.googleApiKey || (googleInput ? googleInput.value.trim() : '');
+        case 'claude':
+        case 'haiku':
+        case 'sonnet':
+            return settings.claudeApiKey || (claudeInput ? claudeInput.value.trim() : '');
+        default:
+            return null;
+    }
+}
+
+function getApiKey(provider) {
+    // Return user API key if available, otherwise indicate if server has key
+    const userKey = getUserApiKey(provider);
+    if (userKey) return userKey;
+    
+    // For server keys, return 'server' to indicate server has key
+    return hasServerApiKey(provider) ? 'server' : null;
+}
+
+// Language Helper Functions
+function updateUILanguage(lang) {
+    if (!window.translations || !window.translations[lang]) {
+        console.error('Translations not found for language:', lang);
+        return;
+    }
+
+    // Update all elements with data-translate attribute
+    document.querySelectorAll('[data-translate]').forEach(element => {
+        const key = element.getAttribute('data-translate');
+        const keys = key.split('.');
+        let translation = window.translations[lang];
+        
+        // Navigate through nested translation objects
+        for (const k of keys) {
+            if (translation && translation[k]) {
+                translation = translation[k];
+            } else {
+                console.warn(`Translation not found for key: ${key}`);
+                return;
+            }
+        }
+        
+        if (typeof translation === 'string') {
+            element.textContent = translation;
+        }
+    });
+
+    // Update document direction
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.body.className = lang === 'ar' ? 'rtl' : 'ltr';
+    
+    // Toggle RTL stylesheet
+    const rtlStylesheet = document.querySelector('link[href*="bulma-rtl"]');
+    if (rtlStylesheet) {
+        rtlStylesheet.disabled = lang !== 'ar';
+    }
+}
+
+// Export functions for use in other modules
+window.showElement = showElement;
+window.hideElement = hideElement;
+window.setElementText = setElementText;
+window.disableButton = disableButton;
+window.showError = showError;
+window.showStatus = showStatus;
+window.logDebug = logDebug;
+window.extractVideoId = extractVideoId;
+window.getApiKey = getApiKey;
+window.updateUILanguage = updateUILanguage;

@@ -1,0 +1,63 @@
+<nav class="navbar is-fixed-top" role="navigation" aria-label="main navigation">
+    <div class="navbar-brand">
+        <a class="navbar-item" href="/">
+            <strong>YouTube Lang Tools</strong>
+        </a>
+
+        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navMenu">
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+            <span aria-hidden="true"></span>
+        </a>
+    </div>
+
+    <div class="navbar-menu is-shadowless" id="navMenu">
+        <div class="navbar-start">
+            <a class="navbar-item" href="/">
+                <span class="icon">
+                    <i class="fas fa-home"></i>
+                </span>
+                <span data-translate="buttons.home">Home</span>
+            </a>
+            <a class="navbar-item" href="#" onclick="document.getElementById('apiInstructionsModal').classList.add('is-active'); return false;">
+                <span class="icon">
+                    <i class="fas fa-key"></i>
+                </span>
+                <span data-translate="buttons.apiInstructions">API Keys</span>
+            </a>
+        </div>
+
+        <div class="navbar-end">
+            <div class="navbar-item">
+                <div class="field is-grouped is-grouped-multiline">
+                    <div class="control" id="p2pStatusControl" style="display:none;">
+                        <button id="p2pStatusBtn" class="button is-small is-light" type="button" title="P2P Network Status">
+                            <span class="icon is-small"><i class="fas fa-circle" id="p2pStatusDot" style="font-size:0.5em;color:#ffdd57;"></i></span>
+                            <span id="p2pStatusText" style="font-size:0.85em;">P2P</span>
+                        </button>
+                    </div>
+                    <div class="control">
+                        <button id="languageToggle" class="button" type="button" aria-label="Toggle language">
+                            <span class="icon"><i class="fas fa-globe"></i></span>
+                            <span id="languageLabel">العربية</span>
+                        </button>
+                    </div>
+                    <div class="control">
+                        <button id="navThemeToggle" class="button" type="button" aria-label="Toggle theme">
+                            <span class="icon"><i class="fas fa-moon"></i></span>
+                            <span id="navThemeLabel" data-translate="buttons.dark">Dark</span>
+                        </button>
+                    </div>
+                    <div class="control">
+                        <button id="settingsBtn" class="button">
+                            <span class="icon">
+                                <i class="fas fa-cog"></i>
+                            </span>
+                            <span>Settings</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

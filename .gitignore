@@ -1,0 +1,9 @@
+.vercel
+node_modules
+.env
+.env.local
+docs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+ssh-connect.cmd
